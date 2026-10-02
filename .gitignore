@@ -1,0 +1,22 @@
+## .NET
+bin/
+obj/
+*.user
+.vs/
+
+## Node
+node_modules/
+dist/
+
+## Web compilada dentro de la API (generada por `npm run build`)
+SolucionProductividad/src/Presentacion/APIWeb/wwwroot/
+
+## Config de producción con secretos (cadena BD, llaves JWT/AES, Firebase)
+appsettings.Production.json
+**/appsettings.Production.json
+
+## Secretos: nunca versionar credenciales de Firebase ni llaves
+*firebase*adminsdk*.json
+credenciales*.json
+.env
+.env.*
