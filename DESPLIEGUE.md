@@ -2,6 +2,8 @@
 
 La API (.NET 8) y la web (React) se publican **juntas** en una sola Web App de Azure. `npm run build` deja la web compilada en `APIWeb/wwwroot` y la API la sirve en el mismo dominio que `/api` y `/hubs`.
 
+Al publicar (Visual Studio o `dotnet publish`), el `.csproj` de la API ejecuta `npm run build` y empaqueta la web recién compilada: no hace falta compilarla a mano. Requiere Node.js instalado; la primera vez ejecuta `npm ci` si no hay `node_modules`. Para publicar sin recompilar la web (lo que ya haya en `wwwroot`): `dotnet publish -p:OmitirFrontend=true`.
+
 ## Datos del entorno
 
 | Qué | Valor |
@@ -22,9 +24,8 @@ La API (.NET 8) y la web (React) se publican **juntas** en una sola Web App de A
 [ ] 1. Probar en local (build + tests + web)
 [ ] 2. ¿Cambió la base de datos? → aplicar migración en producción
 [ ] 3. ¿Hay configuración nueva? → crear variable en Azure
-[ ] 4. npm run build (frontend → wwwroot)
-[ ] 5. Publicar desde Visual Studio
-[ ] 6. Verificar en la URL de producción
+[ ] 4. Publicar desde Visual Studio (compila el frontend solo: npm run build → wwwroot)
+[ ] 5. Verificar en la URL de producción
 ```
 
 ---
@@ -101,15 +102,15 @@ Variables actuales en Azure:
 
 Guardar variables reinicia la app automáticamente.
 
-## 4. Compilar la web
+## 4. Compilar la web (automático)
 
-Desde `frontend/`:
+Ya no hace falta: al publicar, el target `CompilarFrontendAlPublicar` del `.csproj` de la API ejecuta `npm run build`, que vacía y regenera `SolucionProductividad/src/Presentacion/APIWeb/wwwroot`, y empaqueta ese resultado. Si falla `tsc` o Vite, la publicación se detiene con el error.
+
+Para comprobar la web antes de publicar, se puede seguir ejecutando a mano desde `frontend/`:
 
 ```powershell
 npm run build
 ```
-
-Vacía y regenera `SolucionProductividad/src/Presentacion/APIWeb/wwwroot`. **Si te saltas este paso, se publica la web vieja** que haya quedado en `wwwroot`.
 
 ## 5. Publicar
 
@@ -139,7 +140,7 @@ La publicación compila, sube los archivos y reinicia la app (la web queda caíd
 | Síntoma | Causa probable | Solución |
 |---|---|---|
 | `HTTP Error 500.30` al abrir el sitio | La app no arranca: falta una variable o está mal escrita (`ValidateOnStart`) | Revisar Secuencia de registro y el nombre de la variable (`__`) |
-| La web se ve con la versión anterior | No se ejecutó `npm run build` antes de publicar | Compilar y volver a publicar; recargar con Ctrl+F5 |
+| La web se ve con la versión anterior | Se publicó con `-p:OmitirFrontend=true` y un `wwwroot` viejo, o el navegador guardó el `index.html` | Publicar sin `OmitirFrontend`; recargar con Ctrl+F5 |
 | Error al subir archivos | JSON de Firebase no está en el servidor o la ruta no coincide | Revisar `D:\home\site\secretos` en Kudu y `Firebase__RutaCredenciales` |
 | Error de SQL / columna inválida | Se publicó código sin aplicar la migración | Aplicar la migración (paso 2) |
 | Notificaciones en tiempo real lentas | Web sockets desactivados | Configuración general → Web sockets: Activado |

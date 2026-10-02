@@ -5,7 +5,44 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>980893df-3975-4d43-b0e3-1631d3e72c3e</UserSecretsId>
+    <!-- Web React (Vite). `npm run build` la deja en wwwroot; ver el target CompilarFrontendAlPublicar. -->
+    <DirectorioFrontend>$(MSBuildProjectDirectory)\..\..\..\..\frontend\</DirectorioFrontend>
   </PropertyGroup>
+
+  <!--
+    wwwroot es la web compilada (generada, fuera de git). Se excluye de los Content/activos estáticos del build porque
+    se calculan antes de compilar el frontend: incluirían los archivos del build anterior. En local la API la sirve
+    igual desde la carpeta (UseStaticFiles); al publicar la añade el target de abajo, ya recién compilada.
+  -->
+  <ItemGroup>
+    <Content Remove="wwwroot\**" />
+    <None Remove="wwwroot\**" />
+  </ItemGroup>
+
+  <!--
+    Al publicar (Visual Studio o `dotnet publish`) compila el frontend y lo incluye en el paquete.
+    Para publicar sin recompilarlo: -p:OmitirFrontend=true (se publica lo que haya en wwwroot).
+  -->
+  <Target Name="CompilarFrontendAlPublicar" AfterTargets="ComputeResolvedFilesToPublishList">
+    <Exec Command="node --version" StandardOutputImportance="low" ContinueOnError="true" Condition="'$(OmitirFrontend)' != 'true'">
+      <Output TaskParameter="ExitCode" PropertyName="CodigoSalidaNode" />
+    </Exec>
+    <Error Condition="'$(OmitirFrontend)' != 'true' And '$(CodigoSalidaNode)' != '0'" Text="Se necesita Node.js para compilar el frontend al publicar. Instálalo o publica con -p:OmitirFrontend=true." />
+    <Message Importance="high" Text="Instalando dependencias del frontend (npm ci)…" Condition="'$(OmitirFrontend)' != 'true' And !Exists('$(DirectorioFrontend)node_modules')" />
+    <Exec Command="npm ci" WorkingDirectory="$(DirectorioFrontend)" Condition="'$(OmitirFrontend)' != 'true' And !Exists('$(DirectorioFrontend)node_modules')" />
+    <Message Importance="high" Text="Compilando el frontend (npm run build → wwwroot)…" Condition="'$(OmitirFrontend)' != 'true'" />
+    <Exec Command="npm run build" WorkingDirectory="$(DirectorioFrontend)" Condition="'$(OmitirFrontend)' != 'true'" />
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)\wwwroot\index.html')" Text="No hay web compilada en wwwroot (falta index.html)." />
+
+    <ItemGroup>
+      <ArchivosWeb Include="$(MSBuildProjectDirectory)\wwwroot\**" />
+      <ResolvedFileToPublish Include="@(ArchivosWeb->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+        <RelativePath>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
