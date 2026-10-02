@@ -572,6 +572,8 @@ export interface EntradaDiarioDto {
   /** Tarea real creada desde la entrada ("convertir en tarea"). */
   tareaId: string | null;
   claveTarea: string | null;
+  /** Tablero del reporte de actividades de la empresa. */
+  tableroReporteId: string | null;
 }
 
 export interface DiaDiarioDto {
@@ -701,4 +703,76 @@ export interface MarcadorDto {
   titulo: string;
   /** WEB-105, TCK-1042, la fecha del diario o el icono del documento. */
   referencia: string | null;
+}
+
+// ---------- Calendario (Outlook/Teams publicado como ICS) ----------
+
+export interface EstadoConexionCalendarioDto {
+  conectado: boolean;
+  fechaConexion: string | null;
+}
+
+export type DisponibilidadEvento = 'Ocupado' | 'Provisional' | 'Libre' | 'FueraDeOficina' | 'TrabajandoEnOtroLugar';
+
+export interface EventoCalendarioDto {
+  id: string;
+  titulo: string;
+  /** "AAAA-MM-DD" (fin exclusivo) si es de todo el día; si no, instante UTC ISO-8601. */
+  inicio: string;
+  fin: string;
+  todoElDia: boolean;
+  ubicacion: string | null;
+  organizador: string | null;
+  disponibilidad: DisponibilidadEvento;
+  cancelado: boolean;
+  privado: boolean;
+  enlaceReunion: string | null;
+  descripcion: string | null;
+}
+
+// ---------- Reporte de actividades (Excel de la empresa) ----------
+
+export type EstadoActividadReporte = 'Terminada' | 'EnProceso';
+
+export interface TableroReporteDto {
+  id: string;
+  nombre: string;
+  proyectoId: string | null;
+  nombreProyecto: string | null;
+  estaArchivado: boolean;
+  actividades: number;
+}
+
+/** Una entrada del diario con hora, con los valores del reporte ya resueltos. */
+export interface FilaReporteDto {
+  entradaId: string;
+  /** AAAA-MM-DD */
+  fecha: string;
+  fechaSolicitud: string;
+  fechaSolicitudPersonalizada: boolean;
+  /** "HH:mm:ss" */
+  horaInicio: string;
+  horaFin: string | null;
+  /** Título de la entrada tal cual (puede llevar Markdown). */
+  descripcion: string;
+  /** Sin formato Markdown: lo que se muestra y va al Excel. */
+  descripcionTexto: string;
+  tipo: TipoEntradaDiario;
+  claveTarea: string | null;
+  tableroReporteId: string | null;
+  nombreTablero: string | null;
+  /** El tablero viene del proyecto de la tarea vinculada y no fue elegido. */
+  tableroSugerido: boolean;
+  estado: EstadoActividadReporte;
+  horas: number | null;
+  fechaReportado: string | null;
+}
+
+export interface DatosFilaReporte {
+  descripcion: string;
+  horaInicio: string;
+  horaFin: string | null;
+  tableroReporteId: string | null;
+  fechaSolicitud: string | null;
+  estado: EstadoActividadReporte;
 }

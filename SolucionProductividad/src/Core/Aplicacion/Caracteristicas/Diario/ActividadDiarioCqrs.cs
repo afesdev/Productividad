@@ -163,7 +163,7 @@ public sealed class ManejadorObtenerRevisionDiarioConsulta : IRequestHandler<Obt
             .Select(entrada => new EntradaExploradaDto(
                 entrada.RegistroDiario!.FechaLog,
                 new EntradaDiarioDto(entrada.Id, entrada.Tipo, entrada.Titulo, entrada.DetalleMarkdown, entrada.HoraInicio, entrada.HoraFin, entrada.Completada, entrada.FechaCreacion,
-                    entrada.TareaId, entrada.Tarea == null ? null : entrada.Tarea.ListaTareas!.Proyecto!.ClavePrefijo + "-" + entrada.Tarea.NumeroTarea)))
+                    entrada.TareaId, entrada.Tarea == null ? null : entrada.Tarea.ListaTareas!.Proyecto!.ClavePrefijo + "-" + entrada.Tarea.NumeroTarea, entrada.TableroReporteId)))
             .ToListAsync(tokenCancelacion);
         List<EntradaExploradaDto> DeTipo(TipoEntradaDiario tipo) => entradas.Where(explorada => explorada.Entrada.Tipo == tipo).ToList();
 

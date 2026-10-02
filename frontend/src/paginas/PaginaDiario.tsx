@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { CalendarDays, CalendarRange, ChevronLeft, ChevronRight, Columns3, Download, Layers, Loader2, NotebookPen, Search, X } from 'lucide-react';
+import { CalendarDays, CalendarRange, ChevronLeft, ChevronRight, Columns3, Download, FileSpreadsheet, Layers, Loader2, NotebookPen, Search, X } from 'lucide-react';
 import { apiDiario } from '../servicios/api';
 import { notificar } from '../servicios/notificaciones';
 import type { DiaDiarioDto, EntradaExploradaDto, ResumenDiaDiarioDto, TipoEntradaDiario } from '../servicios/tipos';
@@ -300,6 +300,16 @@ function VistaDia({ fecha, alNavegar, alCambiar, capturar }: { fecha: string; al
                   .catch((errorExportacion) => notificar.error('No se pudo exportar', errorExportacion))
               }
             />
+          )}
+          {dia?.registroId && (
+            <Link
+              to={`/reporte?desde=${fecha}&hasta=${fecha}`}
+              title="Reportar este día (Excel de la empresa)"
+              aria-label="Reportar este día"
+              className="inline-grid size-9 place-items-center rounded-lg text-texto-2 transition-colors hover:bg-superficie-2 hover:text-texto"
+            >
+              <FileSpreadsheet className="size-4" />
+            </Link>
           )}
           <BotonIcono icono={ChevronLeft} etiqueta="Día anterior (Alt + ←)" onClick={() => alNavegar(sumarDias(fecha, -1))} />
           {!esHoy && (

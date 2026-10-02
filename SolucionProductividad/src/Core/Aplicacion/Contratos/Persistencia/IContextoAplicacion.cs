@@ -42,6 +42,8 @@ public interface IContextoAplicacion
     DbSet<DocumentoEtiqueta> DocumentosEtiquetas { get; }
     DbSet<VersionDocumento> VersionesDocumento { get; }
     DbSet<Lienzo> Lienzos { get; }
+    DbSet<ConexionCalendario> ConexionesCalendario { get; }
+    DbSet<TableroReporte> TablerosReporte { get; }
 
     Task<int> GuardarCambiosAsync(CancellationToken tokenCancelacion = default);
 }

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import {
+  CalendarDays,
+  FileSpreadsheet,
   ChevronDown,
   FilePlus2,
   FileText,
@@ -31,6 +33,7 @@ import { iconosEntidad } from './editor/usarWikiLinks';
 import { rutaDeEntidad } from '../servicios/rutas';
 import { cambiarTema, usarTema, type Tema } from '../servicios/tema';
 import { ChipCronometro } from '../caracteristicas/tiempo/ControlesCronometro';
+import { ChipReunionSiguiente } from '../caracteristicas/calendario/ChipReunionSiguiente';
 import { PaletaComandos } from './PaletaComandos';
 import { BotonPlegarPanel } from './ui/BotonPlegarPanel';
 import { BotonIcono, unirClases, type Icono } from './ui/primitivos';
@@ -59,10 +62,12 @@ const secciones: { titulo: string; enlaces: EnlaceNavegacion[] }[] = [
   {
     titulo: 'Trabajo',
     enlaces: [
+      { ruta: '/calendario', etiqueta: 'Calendario', icono: CalendarDays, tono: tonos.cielo },
       { ruta: '/tareas', etiqueta: 'Tareas', icono: SquareKanban, tono: tonos.violeta },
       { ruta: '/matriz', etiqueta: 'Eisenhower', icono: Grid2x2, tono: tonos.ambar },
       { ruta: '/tickets', etiqueta: 'Tickets', icono: LifeBuoy, tono: tonos.rosa },
       { ruta: '/tiempo', etiqueta: 'Tiempo', icono: Timer, tono: tonos.indigo },
+      { ruta: '/reporte', etiqueta: 'Reporte', icono: FileSpreadsheet, tono: tonos.esmeralda },
     ],
   },
   {
@@ -383,7 +388,8 @@ function BarraSuperior({ alAbrirMenuMovil }: { alAbrirMenuMovil: () => void }) {
         </kbd>
       </button>
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex min-w-0 items-center gap-2">
+        <ChipReunionSiguiente />
         <ChipCronometro />
         <MenuUsuario />
       </div>

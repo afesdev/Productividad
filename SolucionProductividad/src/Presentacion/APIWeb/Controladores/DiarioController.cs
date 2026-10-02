@@ -15,7 +15,7 @@ public class DiarioController : ControllerBase
     public DiarioController(ISender mediador) => _mediador = mediador;
 
     public sealed record CuerpoNota(string ContenidoMarkdown, byte? Animo, byte? Energia);
-    public sealed record CuerpoEntrada(TipoEntradaDiario Tipo, string Titulo, string? DetalleMarkdown, TimeOnly? HoraInicio, TimeOnly? HoraFin, bool Completada = false);
+    public sealed record CuerpoEntrada(TipoEntradaDiario Tipo, string Titulo, string? DetalleMarkdown, TimeOnly? HoraInicio, TimeOnly? HoraFin, bool Completada = false, Guid? TableroReporteId = null);
 
     [HttpGet("mes")]
     public async Task<ActionResult<IReadOnlyList<ResumenDiaDiarioDto>>> ObtenerMes([FromQuery] int anio, [FromQuery] int mes) =>
@@ -62,12 +62,12 @@ public class DiarioController : ControllerBase
 
     [HttpPost("{fecha}/entradas")]
     public async Task<ActionResult<Guid>> CrearEntrada(DateOnly fecha, [FromBody] CuerpoEntrada cuerpo) =>
-        Ok(await _mediador.Send(new CrearEntradaDiarioComando(fecha, cuerpo.Tipo, cuerpo.Titulo, cuerpo.DetalleMarkdown, cuerpo.HoraInicio, cuerpo.HoraFin, cuerpo.Completada)));
+        Ok(await _mediador.Send(new CrearEntradaDiarioComando(fecha, cuerpo.Tipo, cuerpo.Titulo, cuerpo.DetalleMarkdown, cuerpo.HoraInicio, cuerpo.HoraFin, cuerpo.Completada, cuerpo.TableroReporteId)));
 
     [HttpPut("entradas/{id:guid}")]
     public async Task<IActionResult> ActualizarEntrada(Guid id, [FromBody] CuerpoEntrada cuerpo)
     {
-        await _mediador.Send(new ActualizarEntradaDiarioComando(id, cuerpo.Tipo, cuerpo.Titulo, cuerpo.DetalleMarkdown, cuerpo.HoraInicio, cuerpo.HoraFin, cuerpo.Completada));
+        await _mediador.Send(new ActualizarEntradaDiarioComando(id, cuerpo.Tipo, cuerpo.Titulo, cuerpo.DetalleMarkdown, cuerpo.HoraInicio, cuerpo.HoraFin, cuerpo.Completada, cuerpo.TableroReporteId));
         return NoContent();
     }
 

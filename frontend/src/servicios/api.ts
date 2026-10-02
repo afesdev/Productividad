@@ -1,5 +1,10 @@
 import { clienteApi } from './clienteApi';
 import type {
+  DatosFilaReporte,
+  FilaReporteDto,
+  TableroReporteDto,
+  EstadoConexionCalendarioDto,
+  EventoCalendarioDto,
   ActividadDiaDto,
   MarcadorDto,
   TipoEntidad,
@@ -191,6 +196,35 @@ export const apiLienzos = {
   eliminar: (id: string) => clienteApi.delete(`/lienzos/${id}`),
 };
 
+/** Una API anterior a `descripcionTexto` no lo envía: se usa la descripción tal cual para no romper la página. */
+const normalizarFila = (fila: FilaReporteDto): FilaReporteDto => ({ ...fila, descripcionTexto: fila.descripcionTexto ?? fila.descripcion });
+
+export const apiReporte = {
+  tableros: () => datos(clienteApi.get<TableroReporteDto[]>('/reporte/tableros')),
+  crearTablero: (tablero: { nombre: string; proyectoId: string | null }) => datos(clienteApi.post<string>('/reporte/tableros', tablero)),
+  actualizarTablero: (id: string, tablero: { nombre: string; proyectoId: string | null; estaArchivado: boolean }) =>
+    datos(clienteApi.put<string>(`/reporte/tableros/${id}`, tablero)),
+  eliminarTablero: (id: string) => clienteApi.delete(`/reporte/tableros/${id}`),
+  /** Entradas del diario con hora en [desde, hasta] (AAAA-MM-DD, máx. 93 días). */
+  actividades: (desde: string, hasta: string, soloPendientes: boolean) =>
+    datos(clienteApi.get<FilaReporteDto[]>('/reporte/actividades', { params: { desde, hasta, soloPendientes } })).then((filas) => filas.map(normalizarFila)),
+  actualizarActividad: (entradaId: string, fila: DatosFilaReporte) =>
+    datos(clienteApi.put<FilaReporteDto>(`/reporte/actividades/${entradaId}`, fila)).then(normalizarFila),
+  marcarReportadas: (entradaIds: string[], reportadas = true) => datos(clienteApi.post<number>('/reporte/actividades/reportadas', { entradaIds, reportadas })),
+  /** .xlsx con las filas en el orden dado. */
+  excel: (entradaIds: string[], ejecutor: string) =>
+    datos(clienteApi.post<Blob>('/reporte/actividades/excel', { entradaIds, ejecutor }, { responseType: 'blob' })),
+};
+
+export const apiCalendario = {
+  conexion: () => datos(clienteApi.get<EstadoConexionCalendarioDto>('/calendario/conexion')),
+  conectar: (urlIcs: string) => datos(clienteApi.put<EstadoConexionCalendarioDto>('/calendario/conexion', { urlIcs })),
+  desconectar: () => clienteApi.delete('/calendario/conexion'),
+  /** `actualizar` ignora la caché del backend (unos minutos) y vuelve a descargar el calendario de Outlook. */
+  eventos: (desde: string, hasta: string, actualizar = false, senal?: AbortSignal) =>
+    datos(clienteApi.get<EventoCalendarioDto[]>('/calendario/eventos', { params: { desde, hasta, actualizar }, signal: senal })),
+};
+
 export const apiAnalitica = {
   /** `desplazamientoMinutos`: zona horaria del navegador respecto a UTC (Colombia = -300). */
   resumen: (fechaInicio: string, fechaFin: string, desplazamientoMinutos: number) =>
@@ -295,6 +329,7 @@ export interface DatosEntradaDiario {
   horaInicio: string | null;
   horaFin: string | null;
   completada: boolean;
+  tableroReporteId?: string | null;
 }
 
 /** Diario personal: fechas en formato AAAA-MM-DD (día local). */

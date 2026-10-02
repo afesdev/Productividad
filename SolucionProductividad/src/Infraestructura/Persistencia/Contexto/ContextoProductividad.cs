@@ -62,6 +62,8 @@ public sealed class ContextoProductividad : DbContext, IContextoAplicacion
     public DbSet<DocumentoEtiqueta> DocumentosEtiquetas => Set<DocumentoEtiqueta>();
     public DbSet<VersionDocumento> VersionesDocumento => Set<VersionDocumento>();
     public DbSet<Lienzo> Lienzos => Set<Lienzo>();
+    public DbSet<ConexionCalendario> ConexionesCalendario => Set<ConexionCalendario>();
+    public DbSet<TableroReporte> TablerosReporte => Set<TableroReporte>();
 
     public Task<int> GuardarCambiosAsync(CancellationToken tokenCancelacion = default) => SaveChangesAsync(tokenCancelacion);
 
@@ -121,6 +123,8 @@ public sealed class ContextoProductividad : DbContext, IContextoAplicacion
         constructorModelo.Entity<VersionDocumento>().HasQueryFilter(version =>
             !_aplicarFiltrosUsuario || DocumentosMarkdown.Any(documento => documento.Id == version.DocumentoId && documento.CreadoPor == UsuarioIdActual));
         constructorModelo.Entity<Lienzo>().HasQueryFilter(lienzo => !_aplicarFiltrosUsuario || lienzo.UsuarioId == UsuarioIdActual);
+        constructorModelo.Entity<ConexionCalendario>().HasQueryFilter(conexion => !_aplicarFiltrosUsuario || conexion.UsuarioId == UsuarioIdActual);
+        constructorModelo.Entity<TableroReporte>().HasQueryFilter(tablero => !_aplicarFiltrosUsuario || tablero.UsuarioId == UsuarioIdActual);
     }
 
     /// <summary>

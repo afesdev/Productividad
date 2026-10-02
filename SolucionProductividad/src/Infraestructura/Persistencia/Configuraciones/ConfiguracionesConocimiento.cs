@@ -57,6 +57,23 @@ public sealed class ConfiguracionEntradaDiario : IEntityTypeConfiguration<Entrad
             .HasForeignKey(entrada => entrada.RegistroDiarioId).OnDelete(DeleteBehavior.Cascade);
         // Si se borra la tarea, la entrada se queda (pierde el vínculo).
         entidad.HasOne(entrada => entrada.Tarea).WithMany().HasForeignKey(entrada => entrada.TareaId).OnDelete(DeleteBehavior.SetNull);
+        entidad.Property(entrada => entrada.EstadoReporte).HasConversion<string>().HasMaxLength(20).IsUnicode(false);
+        // Borrar un tablero del catálogo no borra actividades: quedan sin tablero.
+        entidad.HasOne(entrada => entrada.TableroReporte).WithMany().HasForeignKey(entrada => entrada.TableroReporteId).OnDelete(DeleteBehavior.SetNull);
+        entidad.HasIndex(entrada => entrada.FechaReportado);
+    }
+}
+
+public sealed class ConfiguracionTableroReporte : IEntityTypeConfiguration<TableroReporte>
+{
+    public void Configure(EntityTypeBuilder<TableroReporte> entidad)
+    {
+        entidad.HasKey(tablero => tablero.Id);
+        entidad.Property(tablero => tablero.Nombre).HasMaxLength(150).IsRequired();
+        entidad.HasIndex(tablero => new { tablero.UsuarioId, tablero.Nombre }).IsUnique();
+        entidad.HasOne<Usuario>().WithMany().HasForeignKey(tablero => tablero.UsuarioId).OnDelete(DeleteBehavior.Restrict);
+        // Proyecto solo sirve para sugerir el tablero; si se borra el proyecto, el tablero sigue.
+        entidad.HasOne(tablero => tablero.Proyecto).WithMany().HasForeignKey(tablero => tablero.ProyectoId).OnDelete(DeleteBehavior.SetNull);
     }
 }
 
@@ -69,6 +86,18 @@ public sealed class ConfiguracionLienzo : IEntityTypeConfiguration<Lienzo>
         entidad.Property(lienzo => lienzo.ContenidoJson).IsRequired();
         entidad.HasIndex(lienzo => new { lienzo.UsuarioId, lienzo.FechaActualizacion });
         entidad.HasOne<Usuario>().WithMany().HasForeignKey(lienzo => lienzo.UsuarioId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public sealed class ConfiguracionConexionCalendario : IEntityTypeConfiguration<ConexionCalendario>
+{
+    public void Configure(EntityTypeBuilder<ConexionCalendario> entidad)
+    {
+        entidad.HasKey(conexion => conexion.Id);
+        // Cifrado (AES + Base64) de un enlace de hasta 2000 caracteres.
+        entidad.Property(conexion => conexion.UrlIcsCifrada).HasMaxLength(4000).IsRequired();
+        entidad.HasIndex(conexion => conexion.UsuarioId).IsUnique();
+        entidad.HasOne<Usuario>().WithMany().HasForeignKey(conexion => conexion.UsuarioId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

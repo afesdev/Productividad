@@ -10,6 +10,7 @@ using SolucionProductividad.Persistencia.Contexto;
 using Microsoft.Extensions.Options;
 using SolucionProductividad.Servicios.Opciones;
 using SolucionProductividad.Servicios.Seguridad;
+using SolucionProductividad.Servicios.Reporte;
 using SolucionProductividad.Servicios.WikiLinks;
 
 namespace SolucionProductividad.Pruebas.Infraestructura;
@@ -61,6 +62,7 @@ public sealed class BaseDatosPrueba : IAsyncLifetime
         servicios.AddSingleton<INotificadorTiempoReal>(notificador);
         servicios.AddSingleton<IServicioAlmacenamientoFirebase>(almacenamiento);
         servicios.AddSingleton<IServicioGitHub>(gitHub);
+        servicios.AddSingleton<IGeneradorExcelReporte, GeneradorExcelReporte>();
         servicios.AddSingleton<IServicioHashContrasena, ServicioHashContrasena>();
         servicios.AddSingleton<IServicioCifradoBoveda>(new ServicioCifradoBoveda(Options.Create(new OpcionesBoveda { LlaveMaestraBase64 = Convert.ToBase64String(new byte[32]) })));
         servicios.AddSingleton<IServicioTokensJwt>(new ServicioTokensJwt(Options.Create(new OpcionesJwt { LlaveFirma = new string('k', 48) })));

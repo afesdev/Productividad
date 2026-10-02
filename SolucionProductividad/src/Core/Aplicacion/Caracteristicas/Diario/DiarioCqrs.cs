@@ -23,7 +23,8 @@ public sealed record EntradaDiarioDto(
     bool Completada,
     DateTime FechaCreacion,
     Guid? TareaId,
-    string? ClaveTarea);
+    string? ClaveTarea,
+    Guid? TableroReporteId);
 
 /// <param name="RegistroId">null si el día aún no tiene nada escrito.</param>
 public sealed record DiaDiarioDto(
@@ -54,7 +55,8 @@ internal static class ProyeccionesDiario
 {
     public static readonly System.Linq.Expressions.Expression<Func<EntradaDiario, EntradaDiarioDto>> AEntrada = entrada => new EntradaDiarioDto(
         entrada.Id, entrada.Tipo, entrada.Titulo, entrada.DetalleMarkdown, entrada.HoraInicio, entrada.HoraFin, entrada.Completada, entrada.FechaCreacion,
-        entrada.TareaId, entrada.Tarea == null ? null : entrada.Tarea.ListaTareas!.Proyecto!.ClavePrefijo + "-" + entrada.Tarea.NumeroTarea);
+        entrada.TareaId, entrada.Tarea == null ? null : entrada.Tarea.ListaTareas!.Proyecto!.ClavePrefijo + "-" + entrada.Tarea.NumeroTarea,
+        entrada.TableroReporteId);
 
     /// <summary>Primero las que tienen hora (en orden), luego el resto por orden de creación.</summary>
     public static IQueryable<EntradaDiario> Ordenar(IQueryable<EntradaDiario> entradas) =>
@@ -182,7 +184,7 @@ public sealed class ManejadorExplorarEntradasDiarioConsulta : IRequestHandler<Ex
             .Select(entrada => new EntradaExploradaDto(
                 entrada.RegistroDiario!.FechaLog,
                 new EntradaDiarioDto(entrada.Id, entrada.Tipo, entrada.Titulo, entrada.DetalleMarkdown, entrada.HoraInicio, entrada.HoraFin, entrada.Completada, entrada.FechaCreacion,
-                    entrada.TareaId, entrada.Tarea == null ? null : entrada.Tarea.ListaTareas!.Proyecto!.ClavePrefijo + "-" + entrada.Tarea.NumeroTarea)))
+                    entrada.TareaId, entrada.Tarea == null ? null : entrada.Tarea.ListaTareas!.Proyecto!.ClavePrefijo + "-" + entrada.Tarea.NumeroTarea, entrada.TableroReporteId)))
             .ToListAsync(tokenCancelacion);
     }
 }
@@ -259,7 +261,8 @@ public sealed class ManejadorGuardarNotaDiarioComando : IRequestHandler<GuardarN
 // ---------- Entradas ----------
 
 /// <param name="Completada">Solo aplica a Tarea (p. ej. al añadir al diario una tarea ya completada).</param>
-public sealed record CrearEntradaDiarioComando(DateOnly Fecha, TipoEntradaDiario Tipo, string Titulo, string? DetalleMarkdown, TimeOnly? HoraInicio, TimeOnly? HoraFin, bool Completada = false)
+public sealed record CrearEntradaDiarioComando(
+    DateOnly Fecha, TipoEntradaDiario Tipo, string Titulo, string? DetalleMarkdown, TimeOnly? HoraInicio, TimeOnly? HoraFin, bool Completada = false, Guid? TableroReporteId = null)
     : IRequest<Guid>;
 
 public sealed class ValidadorCrearEntradaDiarioComando : AbstractValidator<CrearEntradaDiarioComando>
@@ -286,6 +289,7 @@ public sealed class ManejadorCrearEntradaDiarioComando : IRequestHandler<CrearEn
 
     public async Task<Guid> Handle(CrearEntradaDiarioComando comando, CancellationToken tokenCancelacion)
     {
+        await TablerosDiario.ValidarAsync(_contexto, comando.TableroReporteId, tokenCancelacion);
         var registro = await RegistrosDiario.ObtenerOCrearAsync(_contexto, _usuarioActual.ObtenerUsuarioIdRequerido(), comando.Fecha, tokenCancelacion);
         var entrada = new EntradaDiario
         {
@@ -295,7 +299,8 @@ public sealed class ManejadorCrearEntradaDiarioComando : IRequestHandler<CrearEn
             DetalleMarkdown = string.IsNullOrWhiteSpace(comando.DetalleMarkdown) ? null : comando.DetalleMarkdown.Trim(),
             HoraInicio = comando.HoraInicio,
             HoraFin = comando.HoraFin,
-            Completada = comando.Tipo == TipoEntradaDiario.Tarea && comando.Completada
+            Completada = comando.Tipo == TipoEntradaDiario.Tarea && comando.Completada,
+            TableroReporteId = comando.TableroReporteId
         };
         _contexto.EntradasDiario.Add(entrada);
         registro.FechaActualizacion = DateTime.UtcNow;
@@ -304,7 +309,8 @@ public sealed class ManejadorCrearEntradaDiarioComando : IRequestHandler<CrearEn
     }
 }
 
-public sealed record ActualizarEntradaDiarioComando(Guid Id, TipoEntradaDiario Tipo, string Titulo, string? DetalleMarkdown, TimeOnly? HoraInicio, TimeOnly? HoraFin, bool Completada)
+public sealed record ActualizarEntradaDiarioComando(
+    Guid Id, TipoEntradaDiario Tipo, string Titulo, string? DetalleMarkdown, TimeOnly? HoraInicio, TimeOnly? HoraFin, bool Completada, Guid? TableroReporteId = null)
     : IRequest;
 
 public sealed class ValidadorActualizarEntradaDiarioComando : AbstractValidator<ActualizarEntradaDiarioComando>
@@ -329,12 +335,14 @@ public sealed class ManejadorActualizarEntradaDiarioComando : IRequestHandler<Ac
         // El filtro global limita las entradas a las del usuario actual.
         var entrada = await _contexto.EntradasDiario.Include(entrada => entrada.RegistroDiario).FirstOrDefaultAsync(entrada => entrada.Id == comando.Id, tokenCancelacion)
             ?? throw new ExcepcionEntidadNoEncontrada("la entrada del diario", comando.Id);
+        await TablerosDiario.ValidarAsync(_contexto, comando.TableroReporteId, tokenCancelacion);
         entrada.Tipo = comando.Tipo;
         entrada.Titulo = comando.Titulo.Trim();
         entrada.DetalleMarkdown = string.IsNullOrWhiteSpace(comando.DetalleMarkdown) ? null : comando.DetalleMarkdown.Trim();
         entrada.HoraInicio = comando.HoraInicio;
         entrada.HoraFin = comando.HoraFin;
         entrada.Completada = comando.Tipo == TipoEntradaDiario.Tarea && comando.Completada;
+        entrada.TableroReporteId = comando.TableroReporteId;
         entrada.RegistroDiario!.FechaActualizacion = DateTime.UtcNow;
         await _contexto.GuardarCambiosAsync(tokenCancelacion);
     }
@@ -393,7 +401,7 @@ public sealed class ManejadorObtenerRangoDiarioConsulta : IRequestHandler<Obtene
         var entradas = (await ProyeccionesDiario.Ordenar(_contexto.EntradasDiario.AsNoTracking().Where(entrada => ids.Contains(entrada.RegistroDiarioId)))
                 .Select(entrada => new { entrada.RegistroDiarioId, Dto = new EntradaDiarioDto(
                     entrada.Id, entrada.Tipo, entrada.Titulo, entrada.DetalleMarkdown, entrada.HoraInicio, entrada.HoraFin, entrada.Completada, entrada.FechaCreacion,
-                    entrada.TareaId, entrada.Tarea == null ? null : entrada.Tarea.ListaTareas!.Proyecto!.ClavePrefijo + "-" + entrada.Tarea.NumeroTarea) })
+                    entrada.TareaId, entrada.Tarea == null ? null : entrada.Tarea.ListaTareas!.Proyecto!.ClavePrefijo + "-" + entrada.Tarea.NumeroTarea, entrada.TableroReporteId) })
                 .ToListAsync(tokenCancelacion))
             .ToLookup(entrada => entrada.RegistroDiarioId, entrada => entrada.Dto);
         return registros
@@ -457,6 +465,16 @@ internal static class RegistrosDiario
         registro = new RegistroDiario { UsuarioId = usuarioId, FechaLog = fecha };
         contexto.RegistrosDiarios.Add(registro);
         return registro;
+    }
+}
+
+internal static class TablerosDiario
+{
+    /// <summary>El filtro global solo deja ver los tableros propios: así no se puede imputar a uno ajeno.</summary>
+    public static async Task ValidarAsync(IContextoAplicacion contexto, Guid? tableroId, CancellationToken tokenCancelacion)
+    {
+        if (tableroId is { } id && !await contexto.TablerosReporte.AnyAsync(tablero => tablero.Id == id, tokenCancelacion))
+            throw new ExcepcionEntidadNoEncontrada("el tablero", id);
     }
 }
 

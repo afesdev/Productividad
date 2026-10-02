@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SolucionProductividad.Persistencia.Contexto;
 
@@ -11,9 +12,11 @@ using SolucionProductividad.Persistencia.Contexto;
 namespace SolucionProductividad.Persistencia.Migraciones
 {
     [DbContext(typeof(ContextoProductividad))]
-    partial class ContextoProductividadModelSnapshot : ModelSnapshot
+    [Migration("20261002153730_CalendarioIcs")]
+    partial class CalendarioIcs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -567,25 +570,11 @@ namespace SolucionProductividad.Persistencia.Migraciones
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("EndDetalleMarkdown");
 
-                    b.Property<string>("EstadoReporte")
-                        .HasMaxLength(20)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(20)")
-                        .HasColumnName("EndEstadoReporte");
-
                     b.Property<DateTime>("FechaCreacion")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2")
                         .HasColumnName("EndFechaCreacion")
                         .HasDefaultValueSql("SYSUTCDATETIME()");
-
-                    b.Property<DateTime?>("FechaReportado")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("EndFechaReportado");
-
-                    b.Property<DateOnly?>("FechaSolicitud")
-                        .HasColumnType("date")
-                        .HasColumnName("EndFechaSolicitud");
 
                     b.Property<TimeOnly?>("HoraFin")
                         .HasColumnType("time(0)")
@@ -598,10 +587,6 @@ namespace SolucionProductividad.Persistencia.Migraciones
                     b.Property<Guid>("RegistroDiarioId")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("EndRegistroDiarioId");
-
-                    b.Property<Guid?>("TableroReporteId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("EndTableroReporteId");
 
                     b.Property<Guid?>("TareaId")
                         .HasColumnType("uniqueidentifier")
@@ -621,10 +606,6 @@ namespace SolucionProductividad.Persistencia.Migraciones
                         .HasColumnName("EndTitulo");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("FechaReportado");
-
-                    b.HasIndex("TableroReporteId");
 
                     b.HasIndex("TareaId");
 
@@ -1509,48 +1490,6 @@ namespace SolucionProductividad.Persistencia.Migraciones
                     b.ToTable("BovedaSecretos");
                 });
 
-            modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.TableroReporte", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("TbrId")
-                        .HasDefaultValueSql("NEWID()");
-
-                    b.Property<bool>("EstaArchivado")
-                        .HasColumnType("bit")
-                        .HasColumnName("TbrEstaArchivado");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasColumnName("TbrFechaCreacion")
-                        .HasDefaultValueSql("SYSUTCDATETIME()");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)")
-                        .HasColumnName("TbrNombre");
-
-                    b.Property<Guid?>("ProyectoId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("TbrProyectoId");
-
-                    b.Property<Guid>("UsuarioId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("TbrUsuarioId");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProyectoId");
-
-                    b.HasIndex("UsuarioId", "Nombre")
-                        .IsUnique();
-
-                    b.ToTable("TablerosReporte");
-                });
-
             modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.Tarea", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2172,19 +2111,12 @@ namespace SolucionProductividad.Persistencia.Migraciones
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("SolucionProductividad.Dominio.Entidades.TableroReporte", "TableroReporte")
-                        .WithMany()
-                        .HasForeignKey("TableroReporteId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("SolucionProductividad.Dominio.Entidades.Tarea", "Tarea")
                         .WithMany()
                         .HasForeignKey("TareaId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("RegistroDiario");
-
-                    b.Navigation("TableroReporte");
 
                     b.Navigation("Tarea");
                 });
@@ -2356,22 +2288,6 @@ namespace SolucionProductividad.Persistencia.Migraciones
                         .WithMany()
                         .HasForeignKey("ProyectoId")
                         .OnDelete(DeleteBehavior.Restrict);
-                });
-
-            modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.TableroReporte", b =>
-                {
-                    b.HasOne("SolucionProductividad.Dominio.Entidades.Proyecto", "Proyecto")
-                        .WithMany()
-                        .HasForeignKey("ProyectoId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SolucionProductividad.Dominio.Entidades.Usuario", null)
-                        .WithMany()
-                        .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Proyecto");
                 });
 
             modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.Tarea", b =>

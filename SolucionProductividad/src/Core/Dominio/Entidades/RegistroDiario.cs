@@ -40,6 +40,16 @@ public class EntradaDiario : EntidadBase
     public Guid? TareaId { get; set; }
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 
+    // ---- Reporte de actividades de la empresa (Excel diario) ----
+    public Guid? TableroReporteId { get; set; }
+    /// <summary>FECHA DE SOLICITUD. Si es null se usa la creación de la tarea vinculada o el día de la entrada.</summary>
+    public DateOnly? FechaSolicitud { get; set; }
+    /// <summary>Estado elegido en el reporte. Si es null: Tarea completada = Terminada, Tarea pendiente = En proceso, resto = Terminada.</summary>
+    public EstadoActividadReporte? EstadoReporte { get; set; }
+    /// <summary>Cuándo se copió o exportó al Excel de la empresa; null = pendiente de reportar.</summary>
+    public DateTime? FechaReportado { get; set; }
+
     public RegistroDiario? RegistroDiario { get; set; }
     public Tarea? Tarea { get; set; }
+    public TableroReporte? TableroReporte { get; set; }
 }

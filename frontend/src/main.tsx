@@ -23,6 +23,7 @@ import { PaginaNuevaTarea } from './paginas/PaginaNuevaTarea';
 import { PaginaTablero } from './paginas/PaginaTablero';
 import { PaginaTareas } from './paginas/PaginaTareas';
 import { PaginaLienzos } from './paginas/PaginaLienzos';
+import { PaginaReporte } from './paginas/PaginaReporte';
 import { usarTema } from './servicios/tema';
 import './index.css';
 
@@ -36,6 +37,14 @@ const PaginaDocumentos = lazy(() => import('./paginas/PaginaDocumentos').then((m
 const documentosDiferidos = (
   <Suspense fallback={<div className="py-24 text-center text-sm text-texto-3">Cargando editor…</div>}>
     <PaginaDocumentos />
+  </Suspense>
+);
+
+// FullCalendar solo se descarga al abrir el calendario.
+const PaginaCalendario = lazy(() => import('./paginas/PaginaCalendario').then((modulo) => ({ default: modulo.PaginaCalendario })));
+const calendarioDiferido = (
+  <Suspense fallback={<div className="py-24 text-center text-sm text-texto-3">Cargando calendario…</div>}>
+    <PaginaCalendario />
   </Suspense>
 );
 
@@ -68,6 +77,8 @@ createRoot(document.getElementById('raiz')!).render(
               <Route path="tareas/:id" element={<PaginaDetalleTarea />} />
               <Route path="matriz" element={<PaginaMatriz />} />
               <Route path="tiempo" element={<PaginaTiempo />} />
+              <Route path="calendario" element={calendarioDiferido} />
+              <Route path="reporte" element={<PaginaReporte />} />
               <Route path="documentos" element={documentosDiferidos} />
               <Route path="documentos/:id" element={documentosDiferidos} />
               <Route path="boveda" element={<PaginaBoveda />} />

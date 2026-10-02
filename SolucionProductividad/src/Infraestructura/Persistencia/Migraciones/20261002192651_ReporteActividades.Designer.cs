@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SolucionProductividad.Persistencia.Contexto;
 
@@ -11,9 +12,11 @@ using SolucionProductividad.Persistencia.Contexto;
 namespace SolucionProductividad.Persistencia.Migraciones
 {
     [DbContext(typeof(ContextoProductividad))]
-    partial class ContextoProductividadModelSnapshot : ModelSnapshot
+    [Migration("20261002192651_ReporteActividades")]
+    partial class ReporteActividades
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

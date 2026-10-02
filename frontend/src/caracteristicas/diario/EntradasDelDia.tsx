@@ -15,6 +15,7 @@ import { usarConfirmacion } from '../../componentes/ui/DialogoConfirmacion';
 import { Modal } from '../../componentes/ui/Modal';
 import { AreaTexto, Boton, BotonIcono, Campo, Casilla, Entrada, MensajeError, unirClases } from '../../componentes/ui/primitivos';
 import { ModalConvertirEnTarea } from './ModalConvertirEnTarea';
+import { guardarUltimoTablero, leerUltimoTablero, SelectorTablero, usarTablerosReporte } from '../reporte/tablerosReporte';
 import { accionesIADiario, configuracionTipo, formatearHora, interpretarCaptura, normalizarHora, tiposEntrada } from './presentacionDiario';
 
 export interface ManejadorCaptura {
@@ -26,7 +27,11 @@ export const BarraCaptura = forwardRef<ManejadorCaptura, { fecha: string; alCrea
   const [tipo, setTipo] = useState<TipoEntradaDiario>('Nota');
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [tableroElegido, setTableroElegido] = useState<string | null>(leerUltimoTablero);
   const campo = useRef<HTMLInputElement>(null);
+  const tableros = usarTablerosReporte();
+  // El último tablero guardado puede haberse archivado o borrado: entonces no se propone.
+  const tablero = tableros?.some((opcion) => opcion.id === tableroElegido && !opcion.estaArchivado) ? tableroElegido : null;
 
   useImperativeHandle(referencia, () => ({ enfocar: () => campo.current?.focus() }), []);
 
@@ -38,7 +43,8 @@ export const BarraCaptura = forwardRef<ManejadorCaptura, { fecha: string; alCrea
     if (!captura || enviando) return;
     setEnviando(true);
     try {
-      await apiDiario.crearEntrada(fecha, { ...captura, completada: false });
+      // Solo las entradas con hora van al reporte de actividades: solo esas llevan tablero.
+      await apiDiario.crearEntrada(fecha, { ...captura, completada: false, tableroReporteId: captura.horaInicio ? tablero : null });
       setTexto('');
       await alCrear();
     } catch (errorCreacion) {
@@ -91,11 +97,24 @@ export const BarraCaptura = forwardRef<ManejadorCaptura, { fecha: string; alCrea
         </Boton>
       </div>
       {vistaPrevia && (vistaPrevia.horaInicio || vistaPrevia.detalleMarkdown) && (
-        <p className="px-1 text-xs text-texto-3">
-          {configuracionTipo[vistaPrevia.tipo].etiqueta}
-          {vistaPrevia.horaInicio && ` · ${formatearHora(vistaPrevia.horaInicio)}${vistaPrevia.horaFin ? `–${formatearHora(vistaPrevia.horaFin)}` : ''}`}
-          {vistaPrevia.detalleMarkdown && ' · con detalle'}
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+          <p className="text-xs text-texto-3">
+            {configuracionTipo[vistaPrevia.tipo].etiqueta}
+            {vistaPrevia.horaInicio && ` · ${formatearHora(vistaPrevia.horaInicio)}${vistaPrevia.horaFin ? `–${formatearHora(vistaPrevia.horaFin)}` : ''}`}
+            {vistaPrevia.detalleMarkdown && ' · con detalle'}
+          </p>
+          {vistaPrevia.horaInicio && (
+            <SelectorTablero
+              compacto
+              valor={tablero}
+              alCambiar={(id) => {
+                setTableroElegido(id);
+                guardarUltimoTablero(id);
+                campo.current?.focus();
+              }}
+            />
+          )}
+        </div>
       )}
     </form>
   );
@@ -267,6 +286,7 @@ const aDatos = (entrada: EntradaDiarioDto): DatosEntradaDiario => ({
   horaInicio: entrada.horaInicio,
   horaFin: entrada.horaFin,
   completada: entrada.completada,
+  tableroReporteId: entrada.tableroReporteId,
 });
 
 function ModalEntrada({ entrada, alCerrar, alGuardar }: { entrada: EntradaDiarioDto | null; alCerrar: () => void; alGuardar: () => Promise<void> }) {
@@ -395,6 +415,17 @@ function ModalEntrada({ entrada, alCerrar, alGuardar }: { entrada: EntradaDiario
               <Entrada type="time" value={fin} onChange={(evento) => setFin(evento.target.value)} />
             </Campo>
           </div>
+          {inicio && (
+            <Campo etiqueta="Tablero de Trello" ayuda="Para el reporte de actividades de la empresa.">
+              <SelectorTablero
+                valor={datos.tableroReporteId ?? null}
+                alCambiar={(id) => {
+                  setDatos({ ...datos, tableroReporteId: id });
+                  guardarUltimoTablero(id);
+                }}
+              />
+            </Campo>
+          )}
           <Campo etiqueta="Detalle (Markdown)" ayuda={datos.tipo === 'Decision' ? 'Contexto, alternativas y por qué.' : datos.tipo === 'Aprendizaje' ? 'Qué aprendiste y la fuente.' : undefined}>
             <AreaTexto
               ref={areaDetalle}

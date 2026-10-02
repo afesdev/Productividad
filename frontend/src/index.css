@@ -296,3 +296,76 @@ body {
 /* Scroll sin barra visible (panel lateral de Documentos). */
 .sin-barra-scroll { scrollbar-width: none; }
 .sin-barra-scroll::-webkit-scrollbar { display: none; }
+
+/* ---------- Calendario (FullCalendar) con el aspecto de Teams ---------- */
+.calendario-outlook {
+  --fc-border-color: var(--color-borde);
+  --fc-page-bg-color: var(--color-superficie);
+  --fc-neutral-bg-color: var(--color-fondo);
+  --fc-today-bg-color: color-mix(in oklab, var(--color-violet-100) 35%, transparent);
+  --fc-now-indicator-color: var(--color-red-500);
+  --fc-non-business-color: color-mix(in oklab, var(--color-superficie-2) 55%, transparent);
+  --fc-event-border-color: transparent;
+  --fc-small-font-size: 0.75rem;
+  font-size: 0.8125rem;
+}
+.calendario-outlook .fc-scrollgrid { border: 0; }
+.calendario-outlook .fc-col-header-cell { padding: 0.35rem 0; font-weight: 500; color: var(--color-texto-2); }
+.calendario-outlook a.fc-col-header-cell-cushion:hover { text-decoration: none; }
+.calendario-outlook a.fc-col-header-cell-cushion:hover span:last-child:not(.bg-violet-600) { background: var(--color-superficie-2); }
+.calendario-outlook .fc-col-header-cell-cushion { text-transform: capitalize; }
+.calendario-outlook .fc-day-today .fc-col-header-cell-cushion { color: var(--color-violet-700); font-weight: 600; }
+.calendario-outlook .fc-timegrid-slot { height: 2.25rem; }
+.calendario-outlook .fc-timegrid-slot-minor { border-top-style: dotted; }
+.calendario-outlook .fc-timegrid-slot-label-cushion,
+.calendario-outlook .fc-timegrid-axis-cushion { color: var(--color-texto-3); font-size: 0.6875rem; text-transform: lowercase; }
+.calendario-outlook .fc-daygrid-day-number { color: var(--color-texto-2); font-size: 0.75rem; padding: 0.35rem 0.5rem; }
+.calendario-outlook .fc-day-today .fc-daygrid-day-number { color: var(--color-violet-700); font-weight: 600; }
+.calendario-outlook .fc-timegrid-now-indicator-line { border-width: 2px 0 0; }
+
+/* Eventos: barra a la izquierda y fondo pastel según la disponibilidad que marca Outlook. */
+.calendario-outlook .evento-cal {
+  border: 0;
+  border-left: 3px solid var(--borde-evento);
+  border-radius: 6px;
+  background: var(--fondo-evento);
+  color: var(--texto-evento);
+  cursor: pointer;
+  box-shadow: none;
+  transition: filter 0.15s;
+}
+.calendario-outlook .evento-cal:hover { filter: brightness(0.97); }
+.calendario-outlook .fc-daygrid-dot-event.evento-cal .fc-daygrid-event-dot { display: none; }
+.calendario-outlook .fc-timegrid-event-harness-inset .evento-cal { box-shadow: 0 0 0 1px var(--color-superficie); }
+.calendario-outlook .evento-Ocupado { --fondo-evento: var(--color-violet-100); --borde-evento: var(--color-violet-500); --texto-evento: var(--color-violet-950); }
+.calendario-outlook .evento-Provisional {
+  --fondo-evento: repeating-linear-gradient(-45deg, var(--color-violet-50) 0 6px, var(--color-superficie) 6px 12px);
+  --borde-evento: var(--color-violet-300);
+  --texto-evento: var(--color-violet-900);
+}
+.calendario-outlook .evento-Libre { --fondo-evento: var(--color-superficie-2); --borde-evento: var(--color-borde-fuerte); --texto-evento: var(--color-texto-2); }
+.calendario-outlook .evento-FueraDeOficina { --fondo-evento: var(--color-rose-100); --borde-evento: var(--color-rose-400); --texto-evento: var(--color-rose-950); }
+.calendario-outlook .evento-TrabajandoEnOtroLugar { --fondo-evento: var(--color-sky-100); --borde-evento: var(--color-sky-500); --texto-evento: var(--color-sky-950); }
+.calendario-outlook .evento-cancelado { opacity: 0.55; }
+.calendario-outlook .evento-cancelado .truncate { text-decoration: line-through; }
+.calendario-outlook .evento-cal .fc-event-main,
+.calendario-outlook .evento-cal .fc-event-main-frame { color: var(--texto-evento); }
+
+/* Lo que ya terminó se atenúa, como en Teams. */
+.calendario-outlook .evento-pasado { opacity: 0.6; }
+.calendario-outlook .evento-pasado.evento-cancelado { opacity: 0.4; }
+
+/* Barra fina de carga sobre el calendario. */
+.barra-carga { overflow: hidden; background: color-mix(in oklab, var(--color-violet-500) 15%, transparent); }
+.barra-carga::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  background: var(--color-violet-500);
+  animation: barra-carga 1.1s ease-in-out infinite;
+}
+@keyframes barra-carga {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
