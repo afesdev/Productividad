@@ -24,6 +24,7 @@ import { PaginaTablero } from './paginas/PaginaTablero';
 import { PaginaTareas } from './paginas/PaginaTareas';
 import { PaginaLienzos } from './paginas/PaginaLienzos';
 import { PaginaReporte } from './paginas/PaginaReporte';
+import { PaginaFlujos } from './paginas/PaginaFlujos';
 import { usarTema } from './servicios/tema';
 import './index.css';
 
@@ -45,6 +46,14 @@ const PaginaCalendario = lazy(() => import('./paginas/PaginaCalendario').then((m
 const calendarioDiferido = (
   <Suspense fallback={<div className="py-24 text-center text-sm text-texto-3">Cargando calendario…</div>}>
     <PaginaCalendario />
+  </Suspense>
+);
+
+// React Flow + ELK solo se descargan al abrir un flujo.
+const PaginaFlujo = lazy(() => import('./paginas/PaginaFlujo').then((modulo) => ({ default: modulo.PaginaFlujo })));
+const flujoDiferido = (
+  <Suspense fallback={<div className="grid flex-1 place-items-center py-24 text-sm text-texto-3">Cargando flujo…</div>}>
+    <PaginaFlujo />
   </Suspense>
 );
 
@@ -84,6 +93,8 @@ createRoot(document.getElementById('raiz')!).render(
               <Route path="boveda" element={<PaginaBoveda />} />
               <Route path="lienzos" element={<PaginaLienzos />} />
               <Route path="lienzos/:id" element={lienzoDiferido} />
+              <Route path="flujos" element={<PaginaFlujos />} />
+              <Route path="flujos/:id" element={flujoDiferido} />
               <Route path="diario" element={<PaginaDiario />} />
               <Route path="diario/registro/:id" element={<RedireccionRegistroDiario />} />
               <Route path="diario/:fecha" element={<PaginaDiario />} />

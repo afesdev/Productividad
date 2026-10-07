@@ -15,6 +15,7 @@ import {
   Search,
   SquareCheck,
   SquareKanban,
+  Workflow,
 } from 'lucide-react';
 import { apiBusqueda } from '../servicios/api';
 import type { ResultadoBusquedaDto, TipoEntidad } from '../servicios/tipos';
@@ -40,6 +41,7 @@ const accionesRapidas: ElementoPaleta[] = [
   { id: 'ir-matriz', grupo: 'Ir a', titulo: 'Matriz de Eisenhower', icono: Grid2x2, ruta: '/matriz' },
   { id: 'ir-documentos', grupo: 'Ir a', titulo: 'Documentos', icono: FileText, ruta: '/documentos' },
   { id: 'ir-boveda', grupo: 'Ir a', titulo: 'Bóveda de secretos', icono: KeyRound, ruta: '/boveda' },
+  { id: 'ir-flujos', grupo: 'Ir a', titulo: 'Flujos', icono: Workflow, ruta: '/flujos' },
 ];
 
 const configuracionTipo: Record<TipoEntidad, { grupo: string; icono: Icono }> = {
@@ -47,6 +49,7 @@ const configuracionTipo: Record<TipoEntidad, { grupo: string; icono: Icono }> = 
   Documento: { grupo: 'Documentos', icono: FileText },
   Ticket: { grupo: 'Tickets', icono: LifeBuoy },
   RegistroDiario: { grupo: 'Registros diarios', icono: CalendarDays },
+  Flujo: { grupo: 'Flujos', icono: Workflow },
 };
 
 function rutaDe(resultado: ResultadoBusquedaDto): string | null {
@@ -57,6 +60,8 @@ function rutaDe(resultado: ResultadoBusquedaDto): string | null {
       return `/documentos/${resultado.id}`;
     case 'Ticket':
       return `/tickets/${resultado.id}`;
+    case 'Flujo':
+      return `/flujos/${resultado.id}`;
     default:
       return null; // Módulo de bitácora: pendiente en el frontend.
   }
@@ -135,7 +140,7 @@ export function PaletaComandos() {
       grupo: configuracionTipo[resultado.tipo].grupo,
       icono: configuracionTipo[resultado.tipo].icono,
       titulo: resultado.titulo,
-      detalle: resultado.referencia,
+      detalle: resultado.tipo === 'Flujo' ? (resultado.subtitulo ?? 'Flujo') : resultado.referencia,
       ruta: rutaDe(resultado),
     }));
     return [...encontrados, ...acciones];

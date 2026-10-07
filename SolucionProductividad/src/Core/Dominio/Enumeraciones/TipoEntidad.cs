@@ -8,5 +8,7 @@ public enum TipoEntidad
     Tarea,
     Ticket,
     Documento,
-    RegistroDiario
+    RegistroDiario,
+    /// <summary>Diagrama de proceso. Se enlaza con [[Flujo: Título]].</summary>
+    Flujo
 }

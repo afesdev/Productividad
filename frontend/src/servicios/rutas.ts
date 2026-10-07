@@ -11,6 +11,8 @@ export function rutaDeEntidad(tipo: TipoEntidad, id: string): string {
       return `/documentos/${id}`;
     case 'RegistroDiario':
       return `/diario/registro/${id}`;
+    case 'Flujo':
+      return `/flujos/${id}`;
     default:
       return '/';
   }

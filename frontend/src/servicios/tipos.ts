@@ -4,7 +4,7 @@ export type EstadoTarea = 'Pendiente' | 'EnProgreso' | 'Completada' | 'Cancelada
 export type Prioridad = 'Baja' | 'Media' | 'Alta' | 'Urgente';
 export type CuadranteEisenhower = 'Hacer' | 'Programar' | 'Delegar' | 'Eliminar';
 export type EntornoBoveda = 'Desarrollo' | 'Pruebas' | 'Produccion' | 'Local';
-export type TipoEntidad = 'Tarea' | 'Ticket' | 'Documento' | 'RegistroDiario';
+export type TipoEntidad = 'Tarea' | 'Ticket' | 'Documento' | 'RegistroDiario' | 'Flujo';
 
 export interface UsuarioDto {
   id: string;
@@ -775,4 +775,27 @@ export interface DatosFilaReporte {
   tableroReporteId: string | null;
   fechaSolicitud: string | null;
   estado: EstadoActividadReporte;
+}
+
+// ---------- Flujos (diagramas de procesos) ----------
+
+export interface FlujoResumenDto {
+  id: string;
+  titulo: string;
+  sistema: string | null;
+  descripcion: string | null;
+  pasos: number;
+  fechaCreacion: string;
+  fechaActualizacion: string;
+}
+
+export interface FlujoDetalleDto {
+  id: string;
+  titulo: string;
+  sistema: string | null;
+  descripcion: string | null;
+  /** JSON del editor: { version, direccion, nodos, conexiones }. */
+  contenidoJson: string;
+  fechaCreacion: string;
+  fechaActualizacion: string;
 }

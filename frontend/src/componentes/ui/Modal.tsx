@@ -26,6 +26,10 @@ const clasesAncho = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-
  */
 export function Modal({ abierto, alCerrar, titulo, descripcion, children, pie, ancho = 'md' }: PropiedadesModal) {
   const referenciaPanel = useRef<HTMLDivElement>(null);
+  // alCerrar suele ser una función nueva en cada render: si fuera dependencia del efecto, cada tecla volvería a
+  // ejecutarlo y el foco saltaría al primer campo (no se podía escribir en el segundo).
+  const alCerrarActual = useRef(alCerrar);
+  alCerrarActual.current = alCerrar;
 
   useEffect(() => {
     if (!abierto) return;
@@ -39,15 +43,17 @@ export function Modal({ abierto, alCerrar, titulo, descripcion, children, pie, a
     const alPresionarTecla = (evento: KeyboardEvent) => {
       if (evento.key === 'Escape' && pilaModales[pilaModales.length - 1] === id) {
         evento.stopPropagation();
-        alCerrar();
+        alCerrarActual.current();
       }
     };
     window.addEventListener('keydown', alPresionarTecla, true);
 
-    // Enfoca el primer campo; si no hay, el panel.
+    // Enfoca el primer campo (o el panel), salvo que el foco ya esté dentro (p. ej. un campo con autoFocus).
     requestAnimationFrame(() => {
-      const primerCampo = referenciaPanel.current?.querySelector<HTMLElement>('input, textarea, select');
-      (primerCampo ?? referenciaPanel.current)?.focus();
+      const panel = referenciaPanel.current;
+      if (!panel || panel.contains(document.activeElement)) return;
+      const primerCampo = panel.querySelector<HTMLElement>('input, textarea, select');
+      (primerCampo ?? panel).focus();
     });
 
     return () => {
@@ -56,7 +62,7 @@ export function Modal({ abierto, alCerrar, titulo, descripcion, children, pie, a
       document.body.style.overflow = desbordePrevio;
       elementoPrevio?.focus?.();
     };
-  }, [abierto, alCerrar]);
+  }, [abierto]);
 
   return createPortal(
     <AnimatePresence>

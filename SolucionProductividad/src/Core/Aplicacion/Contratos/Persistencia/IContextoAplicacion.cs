@@ -44,6 +44,7 @@ public interface IContextoAplicacion
     DbSet<Lienzo> Lienzos { get; }
     DbSet<ConexionCalendario> ConexionesCalendario { get; }
     DbSet<TableroReporte> TablerosReporte { get; }
+    DbSet<Flujo> Flujos { get; }
 
     Task<int> GuardarCambiosAsync(CancellationToken tokenCancelacion = default);
 }

@@ -64,6 +64,21 @@ public sealed class ConfiguracionEntradaDiario : IEntityTypeConfiguration<Entrad
     }
 }
 
+public sealed class ConfiguracionFlujo : IEntityTypeConfiguration<Flujo>
+{
+    public void Configure(EntityTypeBuilder<Flujo> entidad)
+    {
+        entidad.HasKey(flujo => flujo.Id);
+        entidad.Property(flujo => flujo.Titulo).HasMaxLength(200).IsRequired();
+        entidad.Property(flujo => flujo.Sistema).HasMaxLength(100);
+        entidad.Property(flujo => flujo.Descripcion).HasMaxLength(1000);
+        entidad.Property(flujo => flujo.ContenidoJson).IsRequired();
+        entidad.Property(flujo => flujo.TextoBuscable).IsRequired();
+        entidad.HasIndex(flujo => new { flujo.UsuarioId, flujo.FechaActualizacion });
+        entidad.HasOne<Usuario>().WithMany().HasForeignKey(flujo => flujo.UsuarioId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 public sealed class ConfiguracionTableroReporte : IEntityTypeConfiguration<TableroReporte>
 {
     public void Configure(EntityTypeBuilder<TableroReporte> entidad)

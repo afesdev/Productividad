@@ -733,6 +733,63 @@ namespace SolucionProductividad.Persistencia.Migraciones
                     b.ToTable("EventosTicket");
                 });
 
+            modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.Flujo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("FluId")
+                        .HasDefaultValueSql("NEWID()");
+
+                    b.Property<string>("ContenidoJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("FluContenidoJson");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("FluDescripcion");
+
+                    b.Property<DateTime>("FechaActualizacion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("FluFechaActualizacion")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("FluFechaCreacion")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("Sistema")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("FluSistema");
+
+                    b.Property<string>("TextoBuscable")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("FluTextoBuscable");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("FluTitulo");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("FluUsuarioId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId", "FechaActualizacion");
+
+                    b.ToTable("Flujos");
+                });
+
             modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.Lienzo", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2206,6 +2263,15 @@ namespace SolucionProductividad.Persistencia.Migraciones
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SolucionProductividad.Dominio.Entidades.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.Flujo", b =>
+                {
                     b.HasOne("SolucionProductividad.Dominio.Entidades.Usuario", null)
                         .WithMany()
                         .HasForeignKey("UsuarioId")

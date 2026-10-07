@@ -1,5 +1,7 @@
 import { clienteApi } from './clienteApi';
 import type {
+  FlujoDetalleDto,
+  FlujoResumenDto,
   DatosFilaReporte,
   FilaReporteDto,
   TableroReporteDto,
@@ -214,6 +216,27 @@ export const apiReporte = {
   /** .xlsx con las filas en el orden dado. */
   excel: (entradaIds: string[], ejecutor: string) =>
     datos(clienteApi.post<Blob>('/reporte/actividades/excel', { entradaIds, ejecutor }, { responseType: 'blob' })),
+};
+
+export interface DatosFlujo {
+  titulo: string;
+  sistema: string | null;
+  descripcion: string | null;
+}
+
+export const apiFlujos = {
+  /** `texto` busca también en los pasos (SP, vistas, endpoints…). */
+  listar: (texto?: string) => datos(clienteApi.get<FlujoResumenDto[]>('/flujos', { params: { texto: texto || undefined } })),
+  sistemas: () => datos(clienteApi.get<string[]>('/flujos/sistemas')),
+  obtener: (id: string) => datos(clienteApi.get<FlujoDetalleDto>(`/flujos/${id}`)),
+  crear: (flujo: DatosFlujo) => datos(clienteApi.post<string>('/flujos', flujo)),
+  actualizarDatos: (id: string, flujo: DatosFlujo) => clienteApi.patch(`/flujos/${id}`, flujo),
+  guardarContenido: (id: string, contenidoJson: string) =>
+    datos(clienteApi.put<{ fechaActualizacion: string }>(`/flujos/${id}/contenido`, { contenidoJson })),
+  duplicar: (id: string) => datos(clienteApi.post<string>(`/flujos/${id}/duplicar`)),
+  eliminar: (id: string) => clienteApi.delete(`/flujos/${id}`),
+  /** Devuelve el flujo en la sintaxis de texto del editor a partir de una descripción libre. */
+  generarConIA: (descripcion: string) => datos(clienteApi.post<{ texto: string }>('/flujos/generar', { descripcion })).then((respuesta) => respuesta.texto),
 };
 
 export const apiCalendario = {

@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import type { AccionTextoIA } from '../../servicios/api';
 import { apiDocumentos } from '../../servicios/api';
-import { formatearFechaHora, formatearRelativo } from '../../servicios/formato';
+import { formatearFecha, formatearFechaHora, formatearRelativo } from '../../servicios/formato';
 import { notificar } from '../../servicios/notificaciones';
 import { rutaDeEntidad } from '../../servicios/rutas';
 import { EventoMarcadoresCambiados } from '../marcadores/ContextoMarcadores';
@@ -452,7 +452,7 @@ export function EditorDocumento({
           <span className="truncate px-1 text-texto-2">{titulo || 'Sin título'}</span>
         </nav>
 
-        <IndicadorGuardado estado={estadoGuardado} fecha={fechaGuardado} alReintentar={() => void guardar()} />
+        <IndicadorGuardado estado={estadoGuardado} fecha={fechaGuardado} fechaCreacion={documento?.fechaCreacion ?? null} alReintentar={() => void guardar()} />
 
         {!enPapelera && (
           <div className="flex items-center gap-0.5">
@@ -746,7 +746,18 @@ export function EditorDocumento({
   );
 }
 
-function IndicadorGuardado({ estado, fecha, alReintentar }: { estado: EstadoGuardado; fecha: string | null; alReintentar: () => void }) {
+/** Fecha de creación fija + estado del autoguardado ("Creado 12 sept 2026 · Guardado hace 7 días"); el detalle exacto va en el tooltip. */
+function IndicadorGuardado({
+  estado,
+  fecha,
+  fechaCreacion,
+  alReintentar,
+}: {
+  estado: EstadoGuardado;
+  fecha: string | null;
+  fechaCreacion: string | null;
+  alReintentar: () => void;
+}) {
   // Re-render cada 30 s para que "hace 1 minuto" avance.
   const [, setPulso] = useState(0);
   useEffect(() => {
@@ -762,8 +773,17 @@ function IndicadorGuardado({ estado, fecha, alReintentar }: { estado: EstadoGuar
       </button>
     );
   }
+  const detalle = [fechaCreacion && `Creado el ${formatearFechaHora(fechaCreacion)}`, fecha && `Guardado el ${formatearFechaHora(fecha)}`].filter(Boolean).join('\n');
   return (
-    <span className="hidden shrink-0 items-center gap-1.5 text-xs text-texto-3 sm:inline-flex" aria-live="polite">
+    <span className="hidden shrink-0 items-center gap-1.5 text-xs text-texto-3 sm:inline-flex" aria-live="polite" title={detalle || undefined}>
+      {fechaCreacion && (
+        <>
+          <span className="hidden md:inline">Creado {formatearFecha(fechaCreacion)}</span>
+          <span className="hidden md:inline" aria-hidden>
+            ·
+          </span>
+        </>
+      )}
       {estado === 'guardando' ? (
         <>
           <Loader2 className="size-3.5 animate-spin" />

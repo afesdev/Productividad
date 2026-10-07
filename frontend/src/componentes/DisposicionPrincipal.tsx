@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import {
+  Workflow,
   CalendarDays,
   FileSpreadsheet,
   ChevronDown,
@@ -76,6 +77,7 @@ const secciones: { titulo: string; enlaces: EnlaceNavegacion[] }[] = [
       { ruta: '/diario', etiqueta: 'Diario', icono: NotebookPen, tono: tonos.melocoton },
       { ruta: '/documentos', etiqueta: 'Documentos', icono: FileText, tono: tonos.esmeralda },
       { ruta: '/lienzos', etiqueta: 'Lienzos', icono: PenTool, tono: tonos.melocoton },
+      { ruta: '/flujos', etiqueta: 'Flujos', icono: Workflow, tono: tonos.violeta },
       { ruta: '/boveda', etiqueta: 'Bóveda', icono: KeyRound, tono: tonos.turquesa },
     ],
   },
@@ -106,9 +108,9 @@ export function DisposicionPrincipal() {
   useEffect(() => setMenuMovilAbierto(false), [ubicacion.pathname]);
 
   // Documentos y Diario tienen su propio panel lateral: ocupan todo el ancho, sin márgenes ni ancho máximo.
-  // El editor de un lienzo (/lienzos/:id) va a pantalla completa; la lista (/lienzos) no.
+  // Los editores de lienzos y flujos (/lienzos/:id, /flujos/:id) van a pantalla completa; sus listas no.
   const pantallaCompleta =
-    ubicacion.pathname.startsWith('/documentos') || ubicacion.pathname.startsWith('/diario') || ubicacion.pathname.startsWith('/lienzos/');
+    ubicacion.pathname.startsWith('/documentos') || ubicacion.pathname.startsWith('/diario') || ubicacion.pathname.startsWith('/lienzos/') || ubicacion.pathname.startsWith('/flujos/');
 
   // Ctrl/⌘ + J desde cualquier pantalla: abrir el diario de hoy con la captura rápida enfocada.
   const navegar = useNavigate();

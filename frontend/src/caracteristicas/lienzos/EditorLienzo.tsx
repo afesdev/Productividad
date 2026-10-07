@@ -1,13 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Excalidraw, serializeAsJSON } from '@excalidraw/excalidraw';
-import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
 import '@excalidraw/excalidraw/index.css';
 import { apiLienzos } from '../../servicios/api';
 import { notificar } from '../../servicios/notificaciones';
 
 export type EstadoGuardado = 'guardado' | 'guardando' | 'sinCambios' | 'error';
 
-const RETRASO_AUTOGUARDADO = 1000;
+const RETRASO_AUTOGUARDADO = 800;
+
+/**
+ * Escena serializada para guardar. Tipo "local" y no "database": "database" descarta los archivos (`files`), así que
+ * las imágenes pegadas o insertadas desaparecían al reabrir el lienzo.
+ */
+const serializar = (elements: unknown, appState: unknown, files: unknown) =>
+  serializeAsJSON(elements as never, appState as never, files as never, 'local');
 
 /** Datos iniciales para Excalidraw a partir de la escena serializada guardada. */
 function analizarEscena(contenidoJson: string) {
@@ -17,9 +23,11 @@ function analizarEscena(contenidoJson: string) {
       elements: escena.elements ?? [],
       appState: escena.appState ?? {},
       files: escena.files ?? {},
+      // El desplazamiento no se guarda: sin esto, lo dibujado lejos del origen quedaba fuera de la vista al reabrir.
+      scrollToContent: true,
     };
   } catch {
-    return { elements: [], appState: {}, files: {} };
+    return { elements: [], appState: {}, files: {}, scrollToContent: true };
   }
 }
 
@@ -40,8 +48,13 @@ interface Propiedades {
  * dentro del lienzo (pointer o teclado). El botón "Guardar" fuerza un guardado inmediato.
  */
 export function EditorLienzo({ lienzoId, contenidoInicial, alCambiarEstado, alRegistrarGuardado }: Propiedades) {
-  const [api, setApi] = useState<ExcalidrawImperativeAPI | null>(null);
   const ultimaEscenaGuardada = useRef(contenidoInicial);
+  /**
+   * Última escena que entregó Excalidraw en onChange (tras la primera interacción). Es la fuente de verdad para
+   * guardar: NO se lee de la API imperativa porque al desmontarse Excalidraw reemplaza su escena por una vacía, y el
+   * guardado "al salir" sobrescribía el lienzo con nada.
+   */
+  const escenaActual = useRef<string | null>(null);
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
   const interaccion = useRef(false);
 
@@ -62,17 +75,19 @@ export function EditorLienzo({ lienzoId, contenidoInicial, alCambiarEstado, alRe
     [lienzoId, alCambiarEstado],
   );
 
-  const escenaActual = useCallback(() => {
-    if (!api) return null;
-    return serializeAsJSON(api.getSceneElements(), api.getAppState(), api.getFiles(), 'database');
-  }, [api]);
+  /** Escena con cambios sin guardar, o null si no hay nada pendiente. */
+  const pendiente = useCallback(() => {
+    const escenaJson = escenaActual.current;
+    return escenaJson !== null && escenaJson !== ultimaEscenaGuardada.current ? escenaJson : null;
+  }, []);
 
   const alCambiar = useCallback(
     (elements: readonly unknown[], appState: unknown, files: unknown) => {
       // Ignora todos los onChange previos a que el usuario toque el lienzo (init, restauración, idle).
       if (!interaccion.current) return;
 
-      const escenaJson = serializeAsJSON(elements as never, appState as never, files as never, 'database');
+      const escenaJson = serializar(elements, appState, files);
+      escenaActual.current = escenaJson;
       if (escenaJson === ultimaEscenaGuardada.current) return;
 
       if (temporizador.current) clearTimeout(temporizador.current);
@@ -83,25 +98,50 @@ export function EditorLienzo({ lienzoId, contenidoInicial, alCambiarEstado, alRe
 
   // Guardado manual inmediato (botón "Guardar").
   const guardarAhora = useCallback(() => {
-    const escenaJson = escenaActual();
-    if (escenaJson === null) return;
     if (temporizador.current) clearTimeout(temporizador.current);
+    const escenaJson = pendiente();
+    if (escenaJson === null) {
+      alCambiarEstado?.('sinCambios');
+      return;
+    }
     void guardar(escenaJson);
-  }, [escenaActual, guardar]);
+  }, [pendiente, guardar, alCambiarEstado]);
 
   useEffect(() => {
     alRegistrarGuardado?.(guardarAhora);
   }, [alRegistrarGuardado, guardarAhora]);
 
-  // Guarda lo pendiente al desmontar (solo si el usuario llegó a interactuar).
-  useEffect(() => {
-    return () => {
+  // Al salir del editor se guarda lo pendiente (la última escena vista, no la de Excalidraw ya desmontado).
+  useEffect(
+    () => () => {
       if (temporizador.current) clearTimeout(temporizador.current);
-      if (!api || !interaccion.current) return;
-      const escenaJson = serializeAsJSON(api.getSceneElements(), api.getAppState(), api.getFiles(), 'database');
-      if (escenaJson !== ultimaEscenaGuardada.current) void apiLienzos.guardar(lienzoId, escenaJson);
+      const escenaJson = pendiente();
+      if (escenaJson !== null) void apiLienzos.guardar(lienzoId, escenaJson);
+    },
+    [lienzoId, pendiente],
+  );
+
+  // Al cambiar de pestaña se guarda ya lo pendiente; al cerrar o recargar con cambios sin guardar, el navegador avisa.
+  useEffect(() => {
+    const alOcultar = () => {
+      if (document.visibilityState !== 'hidden') return;
+      const escenaJson = pendiente();
+      if (escenaJson === null) return;
+      if (temporizador.current) clearTimeout(temporizador.current);
+      void guardar(escenaJson);
     };
-  }, [api, lienzoId]);
+    const alSalir = (evento: BeforeUnloadEvent) => {
+      if (pendiente() === null) return;
+      evento.preventDefault();
+      evento.returnValue = '';
+    };
+    document.addEventListener('visibilitychange', alOcultar);
+    window.addEventListener('beforeunload', alSalir);
+    return () => {
+      document.removeEventListener('visibilitychange', alOcultar);
+      window.removeEventListener('beforeunload', alSalir);
+    };
+  }, [pendiente, guardar]);
 
   return (
     <div
@@ -113,7 +153,7 @@ export function EditorLienzo({ lienzoId, contenidoInicial, alCambiarEstado, alRe
         interaccion.current = true;
       }}
     >
-      <Excalidraw excalidrawAPI={setApi} initialData={datosIniciales} onChange={alCambiar} langCode="es-ES" theme="light" />
+      <Excalidraw initialData={datosIniciales} onChange={alCambiar} langCode="es-ES" theme="light" />
     </div>
   );
 }

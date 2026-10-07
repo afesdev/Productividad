@@ -6,7 +6,7 @@ using SolucionProductividad.Dominio.Enumeraciones;
 namespace SolucionProductividad.Persistencia.Consultas;
 
 /// <summary>
-/// Búsqueda para la Paleta de Comandos: cuatro result sets en un solo viaje.
+/// Búsqueda para la Paleta de Comandos: cinco result sets en un solo viaje.
 /// Dapper no pasa por los filtros globales de EF: cada consulta filtra explícitamente por @UsuarioId.
 /// LIKE '%termino%' es suficiente a escala personal/equipo; con mucho volumen conviene un índice FULLTEXT.
 /// </summary>
@@ -45,6 +45,13 @@ public sealed class ConsultasBusquedaDapper : IConsultasBusqueda
          WHERE LogUsuarioId = @UsuarioId
            AND LogContenidoMarkdown LIKE @Patron ESCAPE '\'
          ORDER BY LogFechaLog DESC;
+
+        -- La referencia "Flujo: Título" es también el destino de los enlaces [[Flujo: Título]].
+        SELECT TOP (@Limite) FluId AS Id, FluTitulo AS Titulo, CONCAT(N'Flujo: ', FluTitulo) AS Referencia, FluSistema AS Subtitulo
+          FROM Flujos
+         WHERE FluUsuarioId = @UsuarioId
+           AND (FluTitulo LIKE @Patron ESCAPE '\' OR FluSistema LIKE @Patron ESCAPE '\' OR FluTextoBuscable LIKE @Patron ESCAPE '\')
+         ORDER BY FluFechaActualizacion DESC;
         """;
 
     private readonly FabricaConexionesSql _fabricaConexiones;
@@ -63,7 +70,7 @@ public sealed class ConsultasBusquedaDapper : IConsultasBusqueda
         using var lector = await conexion.QueryMultipleAsync(new CommandDefinition(ConsultaBusqueda, parametros, cancellationToken: tokenCancelacion));
 
         var resultados = new List<ResultadoBusquedaDto>();
-        foreach (var tipo in new[] { TipoEntidad.Tarea, TipoEntidad.Documento, TipoEntidad.Ticket, TipoEntidad.RegistroDiario })
+        foreach (var tipo in new[] { TipoEntidad.Tarea, TipoEntidad.Documento, TipoEntidad.Ticket, TipoEntidad.RegistroDiario, TipoEntidad.Flujo })
         {
             foreach (var resultado in await lector.ReadAsync<ResultadoBusquedaDto>())
             {

@@ -104,11 +104,11 @@ export function PaginaLienzos() {
           {lienzos.map((lienzo) => (
             <div
               key={lienzo.id}
-              className="group relative flex flex-col overflow-hidden rounded-xl border border-borde bg-superficie shadow-tarjeta transition hover:border-borde-fuerte"
+              className={`group relative flex flex-col rounded-xl border border-borde bg-superficie shadow-tarjeta transition hover:border-borde-fuerte ${menuAbierto === lienzo.id ? 'z-30' : ''}`}
             >
               <button
                 onClick={() => navegar(`/lienzos/${lienzo.id}`)}
-                className="grid h-32 place-items-center bg-gradient-to-br from-violet-50 via-sky-50 to-white text-violet-300 transition group-hover:text-violet-400"
+                className="grid h-32 place-items-center rounded-t-xl bg-gradient-to-br from-violet-50 via-sky-50 to-white text-violet-300 transition group-hover:text-violet-400"
               >
                 <PenTool className="size-8" />
               </button>
