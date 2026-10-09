@@ -1,3 +1,4 @@
+import { ChipEtiqueta } from '../documentos/SelectorEtiquetas';
 import { useState, type DragEvent, type FormEvent } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { CalendarDays, Circle, CircleCheck, CircleDashed, Flag, ListChecks, Plus } from 'lucide-react';
@@ -155,6 +156,13 @@ function TarjetaTarea({
       )}
     >
       <span className={unirClases('font-medium leading-snug', completada && 'text-texto-3 line-through decoration-texto-3')}>{tarea.titulo}</span>
+      {(tarea.etiquetas?.length ?? 0) > 0 && (
+        <span className="flex flex-wrap gap-1">
+          {(tarea.etiquetas ?? []).slice(0, 4).map((etiqueta) => (
+            <ChipEtiqueta key={etiqueta.id} etiqueta={etiqueta} className="h-5 px-1.5 text-[11px]" />
+          ))}
+        </span>
+      )}
       <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-texto-3">
         <span className="font-mono">{tarea.clave}</span>
         {prioridadVisible && (

@@ -116,6 +116,42 @@ public sealed class ConfiguracionConexionCalendario : IEntityTypeConfiguration<C
     }
 }
 
+public sealed class ConfiguracionConexionTrello : IEntityTypeConfiguration<ConexionTrello>
+{
+    public void Configure(EntityTypeBuilder<ConexionTrello> entidad)
+    {
+        entidad.HasKey(conexion => conexion.Id);
+        // Cifrado (AES + Base64) de un token de hasta ~100 caracteres.
+        entidad.Property(conexion => conexion.TokenCifrado).HasMaxLength(1000).IsRequired();
+        entidad.Property(conexion => conexion.IdMiembro).HasMaxLength(50).IsRequired();
+        entidad.Property(conexion => conexion.NombreMiembro).HasMaxLength(200).IsRequired();
+        entidad.Property(conexion => conexion.UsuarioMiembro).HasMaxLength(100).IsRequired();
+        entidad.HasIndex(conexion => conexion.UsuarioId).IsUnique();
+        entidad.HasOne<Usuario>().WithMany().HasForeignKey(conexion => conexion.UsuarioId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public sealed class ConfiguracionVinculoTrello : IEntityTypeConfiguration<VinculoTrello>
+{
+    public void Configure(EntityTypeBuilder<VinculoTrello> entidad)
+    {
+        entidad.HasKey(vinculo => vinculo.Id);
+        entidad.Property(vinculo => vinculo.IdTarjeta).HasMaxLength(24).IsRequired();
+        entidad.Property(vinculo => vinculo.NombreTarjeta).HasMaxLength(500).IsRequired();
+        entidad.Property(vinculo => vinculo.NombreTablero).HasMaxLength(200).IsRequired();
+        entidad.Property(vinculo => vinculo.UrlTarjeta).HasMaxLength(300).IsRequired();
+        // Una tarjeta se vincula una sola vez a cada tarea o ticket.
+        entidad.HasIndex(vinculo => new { vinculo.TareaId, vinculo.IdTarjeta }).IsUnique().HasFilter("[VtrTareaId] IS NOT NULL");
+        entidad.HasIndex(vinculo => new { vinculo.TicketId, vinculo.IdTarjeta }).IsUnique().HasFilter("[VtrTicketId] IS NOT NULL");
+        entidad.HasIndex(vinculo => new { vinculo.UsuarioId, vinculo.IdTarjeta });
+        entidad.ToTable(tabla => tabla.HasCheckConstraint("CK_VinculosTrello_Destino",
+            "([VtrTareaId] IS NOT NULL AND [VtrTicketId] IS NULL) OR ([VtrTareaId] IS NULL AND [VtrTicketId] IS NOT NULL)"));
+        entidad.HasOne<Usuario>().WithMany().HasForeignKey(vinculo => vinculo.UsuarioId).OnDelete(DeleteBehavior.Restrict);
+        entidad.HasOne<Tarea>().WithMany().HasForeignKey(vinculo => vinculo.TareaId).OnDelete(DeleteBehavior.Cascade);
+        entidad.HasOne<Ticket>().WithMany().HasForeignKey(vinculo => vinculo.TicketId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 public sealed class ConfiguracionArchivoAdjunto : IEntityTypeConfiguration<ArchivoAdjunto>
 {
     public void Configure(EntityTypeBuilder<ArchivoAdjunto> entidad)
@@ -185,6 +221,30 @@ public sealed class ConfiguracionEtiquetaDocumento : IEntityTypeConfiguration<Et
         entidad.Property(etiqueta => etiqueta.Color).HasMaxLength(20).IsUnicode(false).IsRequired();
         entidad.HasIndex(etiqueta => new { etiqueta.UsuarioId, etiqueta.Nombre }).IsUnique();
         entidad.HasOne<Usuario>().WithMany().HasForeignKey(etiqueta => etiqueta.UsuarioId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public sealed class ConfiguracionTicketEtiqueta : IEntityTypeConfiguration<TicketEtiqueta>
+{
+    public void Configure(EntityTypeBuilder<TicketEtiqueta> entidad)
+    {
+        entidad.HasKey(relacion => relacion.Id);
+        entidad.HasIndex(relacion => new { relacion.TicketId, relacion.EtiquetaId }).IsUnique();
+        entidad.HasIndex(relacion => relacion.EtiquetaId);
+        entidad.HasOne<Ticket>().WithMany().HasForeignKey(relacion => relacion.TicketId).OnDelete(DeleteBehavior.Cascade);
+        entidad.HasOne(relacion => relacion.Etiqueta).WithMany().HasForeignKey(relacion => relacion.EtiquetaId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public sealed class ConfiguracionTareaEtiqueta : IEntityTypeConfiguration<TareaEtiqueta>
+{
+    public void Configure(EntityTypeBuilder<TareaEtiqueta> entidad)
+    {
+        entidad.HasKey(relacion => relacion.Id);
+        entidad.HasIndex(relacion => new { relacion.TareaId, relacion.EtiquetaId }).IsUnique();
+        entidad.HasIndex(relacion => relacion.EtiquetaId);
+        entidad.HasOne<Tarea>().WithMany(tarea => tarea.Etiquetas).HasForeignKey(relacion => relacion.TareaId).OnDelete(DeleteBehavior.Cascade);
+        entidad.HasOne(relacion => relacion.Etiqueta).WithMany().HasForeignKey(relacion => relacion.EtiquetaId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 

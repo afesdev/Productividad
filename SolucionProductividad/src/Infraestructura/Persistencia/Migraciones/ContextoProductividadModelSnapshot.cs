@@ -356,6 +356,54 @@ namespace SolucionProductividad.Persistencia.Migraciones
                     b.ToTable("ConexionesCalendario");
                 });
 
+            modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.ConexionTrello", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("TreId")
+                        .HasDefaultValueSql("NEWID()");
+
+                    b.Property<DateTime>("FechaConexion")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("TreFechaConexion");
+
+                    b.Property<string>("IdMiembro")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("TreIdMiembro");
+
+                    b.Property<string>("NombreMiembro")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("TreNombreMiembro");
+
+                    b.Property<string>("TokenCifrado")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("TreTokenCifrado");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("TreUsuarioId");
+
+                    b.Property<string>("UsuarioMiembro")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("TreUsuarioMiembro");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId")
+                        .IsUnique();
+
+                    b.ToTable("ConexionesTrello");
+                });
+
             modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.DespliegueTicket", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1037,6 +1085,44 @@ namespace SolucionProductividad.Persistencia.Migraciones
                         });
                 });
 
+            modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.PreferenciaUsuario", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("PreId")
+                        .HasDefaultValueSql("NEWID()");
+
+                    b.Property<string>("Clave")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("PreClave");
+
+                    b.Property<DateTime>("FechaActualizacion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("PreFechaActualizacion")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("PreUsuarioId");
+
+                    b.Property<string>("ValorJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("PreValorJson");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId", "Clave")
+                        .IsUnique();
+
+                    b.ToTable("PreferenciasUsuario");
+                });
+
             modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.Proyecto", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1706,6 +1792,32 @@ namespace SolucionProductividad.Persistencia.Migraciones
                     b.ToTable("Tareas");
                 });
 
+            modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.TareaEtiqueta", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("TaeId")
+                        .HasDefaultValueSql("NEWID()");
+
+                    b.Property<Guid>("EtiquetaId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("TaeEtiquetaId");
+
+                    b.Property<Guid>("TareaId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("TaeTareaId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EtiquetaId");
+
+                    b.HasIndex("TareaId", "EtiquetaId")
+                        .IsUnique();
+
+                    b.ToTable("TareasEtiquetas");
+                });
+
             modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.Ticket", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1859,6 +1971,32 @@ namespace SolucionProductividad.Persistencia.Migraciones
                     b.HasIndex("AgenteAsignadoId", "Estado");
 
                     b.ToTable("Tickets");
+                });
+
+            modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.TicketEtiqueta", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("TkeId")
+                        .HasDefaultValueSql("NEWID()");
+
+                    b.Property<Guid>("EtiquetaId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("TkeEtiquetaId");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("TkeTicketId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EtiquetaId");
+
+                    b.HasIndex("TicketId", "EtiquetaId")
+                        .IsUnique();
+
+                    b.ToTable("TicketsEtiquetas");
                 });
 
             modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.TicketProyecto", b =>
@@ -2073,6 +2211,72 @@ namespace SolucionProductividad.Persistencia.Migraciones
                     b.ToTable("VersionesDocumento");
                 });
 
+            modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.VinculoTrello", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("VtrId")
+                        .HasDefaultValueSql("NEWID()");
+
+                    b.Property<DateTime>("FechaVinculo")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("VtrFechaVinculo");
+
+                    b.Property<string>("IdTarjeta")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)")
+                        .HasColumnName("VtrIdTarjeta");
+
+                    b.Property<string>("NombreTablero")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("VtrNombreTablero");
+
+                    b.Property<string>("NombreTarjeta")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("VtrNombreTarjeta");
+
+                    b.Property<Guid?>("TareaId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("VtrTareaId");
+
+                    b.Property<Guid?>("TicketId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("VtrTicketId");
+
+                    b.Property<string>("UrlTarjeta")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("VtrUrlTarjeta");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("VtrUsuarioId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TareaId", "IdTarjeta")
+                        .IsUnique()
+                        .HasFilter("[VtrTareaId] IS NOT NULL");
+
+                    b.HasIndex("TicketId", "IdTarjeta")
+                        .IsUnique()
+                        .HasFilter("[VtrTicketId] IS NOT NULL");
+
+                    b.HasIndex("UsuarioId", "IdTarjeta");
+
+                    b.ToTable("VinculosTrello", t =>
+                        {
+                            t.HasCheckConstraint("CK_VinculosTrello_Destino", "([VtrTareaId] IS NOT NULL AND [VtrTicketId] IS NULL) OR ([VtrTareaId] IS NULL AND [VtrTicketId] IS NOT NULL)");
+                        });
+                });
+
             modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.ArchivoAdjunto", b =>
                 {
                     b.HasOne("SolucionProductividad.Dominio.Entidades.DocumentoMarkdown", null)
@@ -2149,6 +2353,15 @@ namespace SolucionProductividad.Persistencia.Migraciones
                 });
 
             modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.ConexionCalendario", b =>
+                {
+                    b.HasOne("SolucionProductividad.Dominio.Entidades.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.ConexionTrello", b =>
                 {
                     b.HasOne("SolucionProductividad.Dominio.Entidades.Usuario", null)
                         .WithMany()
@@ -2327,6 +2540,15 @@ namespace SolucionProductividad.Persistencia.Migraciones
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.PreferenciaUsuario", b =>
+                {
+                    b.HasOne("SolucionProductividad.Dominio.Entidades.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.Proyecto", b =>
                 {
                     b.HasOne("SolucionProductividad.Dominio.Entidades.Usuario", null)
@@ -2464,6 +2686,23 @@ namespace SolucionProductividad.Persistencia.Migraciones
                     b.Navigation("TareaPadre");
                 });
 
+            modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.TareaEtiqueta", b =>
+                {
+                    b.HasOne("SolucionProductividad.Dominio.Entidades.EtiquetaDocumento", "Etiqueta")
+                        .WithMany()
+                        .HasForeignKey("EtiquetaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SolucionProductividad.Dominio.Entidades.Tarea", null)
+                        .WithMany("Etiquetas")
+                        .HasForeignKey("TareaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Etiqueta");
+                });
+
             modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.Ticket", b =>
                 {
                     b.HasOne("SolucionProductividad.Dominio.Entidades.Usuario", null)
@@ -2492,6 +2731,23 @@ namespace SolucionProductividad.Persistencia.Migraciones
                         .WithMany()
                         .HasForeignKey("TareaRelacionadaId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.TicketEtiqueta", b =>
+                {
+                    b.HasOne("SolucionProductividad.Dominio.Entidades.EtiquetaDocumento", "Etiqueta")
+                        .WithMany()
+                        .HasForeignKey("EtiquetaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SolucionProductividad.Dominio.Entidades.Ticket", null)
+                        .WithMany()
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Etiqueta");
                 });
 
             modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.TicketProyecto", b =>
@@ -2554,6 +2810,25 @@ namespace SolucionProductividad.Persistencia.Migraciones
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.VinculoTrello", b =>
+                {
+                    b.HasOne("SolucionProductividad.Dominio.Entidades.Tarea", null)
+                        .WithMany()
+                        .HasForeignKey("TareaId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("SolucionProductividad.Dominio.Entidades.Ticket", null)
+                        .WithMany()
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("SolucionProductividad.Dominio.Entidades.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.ListaTareas", b =>
                 {
                     b.Navigation("Tareas");
@@ -2578,6 +2853,8 @@ namespace SolucionProductividad.Persistencia.Migraciones
 
             modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.Tarea", b =>
                 {
+                    b.Navigation("Etiquetas");
+
                     b.Navigation("Subtareas");
                 });
 

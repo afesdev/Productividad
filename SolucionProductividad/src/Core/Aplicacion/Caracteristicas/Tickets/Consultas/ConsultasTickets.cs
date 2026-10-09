@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using MediatR;
+using SolucionProductividad.Aplicacion.Caracteristicas.Documentos;
 using Microsoft.EntityFrameworkCore;
 using SolucionProductividad.Aplicacion.Caracteristicas.Archivos.Dtos;
 using SolucionProductividad.Aplicacion.Caracteristicas.Tickets.Dtos;
@@ -25,7 +26,7 @@ public enum VistaTickets
 
 // ---------- Listado ----------
 
-public sealed record ListarTicketsConsulta(VistaTickets Vista = VistaTickets.Abiertos, string? Texto = null, TipoTicket? Tipo = null, Guid? ProyectoId = null)
+public sealed record ListarTicketsConsulta(VistaTickets Vista = VistaTickets.Abiertos, string? Texto = null, TipoTicket? Tipo = null, Guid? ProyectoId = null, Guid? EtiquetaId = null)
     : IRequest<IReadOnlyList<TicketResumenDto>>;
 
 public sealed class ManejadorListarTicketsConsulta : IRequestHandler<ListarTicketsConsulta, IReadOnlyList<TicketResumenDto>>
@@ -69,6 +70,9 @@ public sealed class ManejadorListarTicketsConsulta : IRequestHandler<ListarTicke
         if (consulta.ProyectoId is { } proyectoId)
             tickets = tickets.Where(ticket => _contexto.TicketsProyectos.Any(relacion => relacion.TicketId == ticket.Id && relacion.ProyectoSoporteId == proyectoId));
 
+        if (consulta.EtiquetaId is { } etiquetaId)
+            tickets = tickets.Where(ticket => _contexto.TicketsEtiquetas.Any(relacion => relacion.TicketId == ticket.Id && relacion.EtiquetaId == etiquetaId));
+
         var resultado = await tickets
             .OrderByDescending(ticket => ticket.FechaActualizacion)
             .Take(300)
@@ -103,7 +107,12 @@ internal static class ProyeccionesTicket
          join proyecto in contexto.ProyectosSoporte on relacion.ProyectoSoporteId equals proyecto.Id
          where relacion.TicketId == ticket.Id
          orderby proyecto.Nombre
-         select new ProyectoTicketDto(proyecto.Id, proyecto.Nombre, proyecto.Color)).ToList());
+         select new ProyectoTicketDto(proyecto.Id, proyecto.Nombre, proyecto.Color)).ToList(),
+        (from relacion in contexto.TicketsEtiquetas
+         join etiqueta in contexto.EtiquetasDocumento on relacion.EtiquetaId equals etiqueta.Id
+         where relacion.TicketId == ticket.Id
+         orderby etiqueta.Nombre
+         select new EtiquetaDto(etiqueta.Id, etiqueta.Nombre, etiqueta.Color)).ToList());
 }
 
 // ---------- Conteos para las pestañas ----------

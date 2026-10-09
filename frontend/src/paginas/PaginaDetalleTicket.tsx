@@ -6,6 +6,7 @@ import { AccionesTicket } from '../caracteristicas/tickets/AccionesTicket';
 import { usarCronometro } from '../caracteristicas/tiempo/ContextoCronometro';
 import { BotonCronometro } from '../caracteristicas/tiempo/ControlesCronometro';
 import { BotonMarcador } from '../caracteristicas/marcadores/ContextoMarcadores';
+import { BotonConexiones } from '../caracteristicas/grafo/ComponentesGrafo';
 import { LineaFlujo } from '../caracteristicas/tickets/LineaFlujo';
 import { PestanaCodigo } from '../caracteristicas/tickets/PestanaCodigo';
 import { PestanaConversacion, PestanaDespliegues, PestanaHistorial, PestanaResumen } from '../caracteristicas/tickets/PestanasTicket';
@@ -23,6 +24,8 @@ import {
 } from '../caracteristicas/tickets/presentacionTickets';
 import { apiProyectos, apiProyectosSoporte, apiTareas, apiTickets, type DatosTicket } from '../servicios/api';
 import { ChipProyecto, SelectorProyectos } from '../caracteristicas/tickets/ProyectosTicket';
+import { SelectorEtiquetas } from '../caracteristicas/documentos/SelectorEtiquetas';
+import { usarCatalogoEtiquetas } from '../caracteristicas/documentos/catalogoEtiquetas';
 import { obtenerMensajeError } from '../servicios/clienteApi';
 import { formatearFechaHora, formatearRelativo } from '../servicios/formato';
 import { notificar } from '../servicios/notificaciones';
@@ -30,6 +33,7 @@ import type { Prioridad, ProyectoSoporteDto, TicketDetalleDto, TipoTicket, Usuar
 import { Avatar } from '../componentes/ui/Avatar';
 import { Modal } from '../componentes/ui/Modal';
 import { Boton, BotonIcono, Campo, Entrada, Esqueleto, Insignia, MensajeError, Selector, unirClases, type Icono } from '../componentes/ui/primitivos';
+import { VinculosTrello } from '../caracteristicas/trello/VinculosTrello';
 
 type Pestana = 'resumen' | 'codigo' | 'despliegues' | 'conversacion' | 'historial';
 
@@ -112,6 +116,7 @@ export function PaginaDetalleTicket() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <BotonMarcador tipo="Ticket" id={detalle.resumen.id} />
+            <BotonConexiones tipo="Ticket" id={detalle.resumen.id} />
             <BotonCronometro ticketId={detalle.resumen.id} />
             <AccionesTicket detalle={detalle} usuarios={usuarios} alCambiar={cargar} />
           </div>
@@ -153,6 +158,7 @@ export function PaginaDetalleTicket() {
 
         <aside className="flex flex-col gap-4 xl:sticky xl:top-20 xl:self-start">
           <PanelDetalles detalle={detalle} usuarios={usuarios} alCambiar={cargar} alNavegar={navegar} />
+          <VinculosTrello ticketId={detalle.resumen.id} className="rounded-xl border border-borde bg-superficie p-5 shadow-tarjeta" />
         </aside>
       </div>
 
@@ -218,6 +224,8 @@ function PanelDetalles({
     }
   }
 
+  const catalogoEtiquetas = usarCatalogoEtiquetas();
+
   return (
     <>
       <section className="rounded-xl border border-borde bg-superficie p-5 shadow-tarjeta">
@@ -225,6 +233,14 @@ function PanelDetalles({
         <dl className="flex flex-col gap-3.5 text-sm">
           <Dato etiqueta="Proyectos">
             <ProyectosEditables detalle={detalle} alGuardar={(proyectoIds) => guardarCampo({ proyectoIds }, 'Proyectos actualizados')} />
+          </Dato>
+          <Dato etiqueta="Etiquetas">
+            <SelectorEtiquetas
+              asignar={(ids) => apiTickets.asignarEtiquetas(detalle.resumen.id, ids)}
+              asignadas={detalle.resumen.etiquetas}
+              disponibles={catalogoEtiquetas}
+              alCambiar={() => void alCambiar()}
+            />
           </Dato>
           <Dato etiqueta="Responsable">
             <select

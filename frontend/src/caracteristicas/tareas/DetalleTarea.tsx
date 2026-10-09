@@ -1,31 +1,19 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import {
-  ArrowLeft,
-  CalendarDays,
-  CircleDot,
-  Clock,
-  FileText,
-  Flag,
-  Grid2x2,
-  Link2,
-  ListChecks,
-  Loader2,
-  Paperclip,
-  Pencil,
-  Plus,
-  Trash2,
-  X,
-} from 'lucide-react';
+import { ArrowLeft, CalendarDays, CircleDot, Clock, FileText, Flag, Grid2x2, Link2, ListChecks, Loader2, Paperclip, Pencil, Plus, Tag, Trash2, X } from 'lucide-react';
 import { apiArchivos, apiTareas, type CambiosTarea } from '../../servicios/api';
 import { notificar } from '../../servicios/notificaciones';
+import { SelectorEtiquetas } from '../documentos/SelectorEtiquetas';
+import { usarCatalogoEtiquetas } from '../documentos/catalogoEtiquetas';
 import type { ArchivoAdjuntoDto, BacklinkDto, EstadoTarea, Prioridad, TareaDetalleDto, TareaResumenDto } from '../../servicios/tipos';
 import { EditorRico, type ManejadorEditorRico } from '../../componentes/editor/EditorRico';
 import { usarWikiLinks } from '../../componentes/editor/usarWikiLinks';
 import { usarConfirmacion } from '../../componentes/ui/DialogoConfirmacion';
 import { BotonCronometro } from '../tiempo/ControlesCronometro';
 import { BotonMarcador } from '../marcadores/ContextoMarcadores';
+import { BotonConexiones } from '../grafo/ComponentesGrafo';
+import { VinculosTrello } from '../trello/VinculosTrello';
 import { Boton, BotonIcono, Casilla, Esqueleto, unirClases, type Icono } from '../../componentes/ui/primitivos';
 
 const estados: { valor: EstadoTarea; etiqueta: string }[] = [
@@ -49,6 +37,7 @@ const clasesSelectorEnLinea = 'h-8 rounded-md border border-transparent bg-trans
 export function DetalleTarea({ tareaId, modoPagina = false, alCerrar, alAbrirTarea, alCambiar }: PropiedadesDetalle) {
   const confirmar = usarConfirmacion();
   const [detalle, setDetalle] = useState<TareaDetalleDto | null>(null);
+  const catalogoEtiquetas = usarCatalogoEtiquetas();
   const [backlinks, setBacklinks] = useState<BacklinkDto[]>([]);
   const [guardando, setGuardando] = useState(false);
 
@@ -176,6 +165,22 @@ export function DetalleTarea({ tareaId, modoPagina = false, alCerrar, alAbrirTar
             <input type="date" value={aFechaInput(detalle.resumen.fechaVencimiento)} onChange={(evento) => void guardar({ fechaVencimiento: deFechaInput(evento.target.value) })} className={clasesSelectorEnLinea} />
           </Propiedad>
 
+          <Propiedad icono={Tag} etiqueta="Etiquetas">
+            <div className="px-2 py-1">
+              <SelectorEtiquetas
+                asignar={async (ids) => {
+                  const resumen = await apiTareas.asignarEtiquetas(tareaId, ids);
+                  setDetalle((actual) => (actual ? { ...actual, resumen } : actual));
+                  alCambiar(tareaId, resumen);
+                  return resumen.etiquetas;
+                }}
+                asignadas={detalle.resumen.etiquetas}
+                disponibles={catalogoEtiquetas}
+                alCambiar={() => undefined}
+              />
+            </div>
+          </Propiedad>
+
           <Propiedad icono={Clock} etiqueta="Estimación">
             <CampoHoras valor={detalle.horasEstimadas} alGuardar={async (horasEstimadas) => { await guardar({ horasEstimadas }); }} />
           </Propiedad>
@@ -188,6 +193,8 @@ export function DetalleTarea({ tareaId, modoPagina = false, alCerrar, alAbrirTar
         )}
 
         <SeccionAdjuntos tareaId={tareaId} adjuntos={detalle.adjuntos} alCambiar={(adjuntos) => setDetalle({ ...detalle, adjuntos })} />
+
+        <VinculosTrello tareaId={tareaId} />
 
         <Seccion icono={Link2} titulo="Referenciada en">
           {backlinks.length === 0 ? (
@@ -223,6 +230,7 @@ export function DetalleTarea({ tareaId, modoPagina = false, alCerrar, alAbrirTar
           </div>
           <div className="flex items-center gap-1">
             {detalle && <BotonMarcador tipo="Tarea" id={tareaId} />}
+            {detalle && <BotonConexiones tipo="Tarea" id={tareaId} />}
             {detalle && <BotonCronometro tareaId={tareaId} className="mr-1" />}
             {detalle && <BotonIcono icono={Trash2} etiqueta="Eliminar tarea" onClick={() => void eliminar()} className="hover:text-peligro" />}
             <BotonIcono icono={X} etiqueta="Cerrar" onClick={alCerrar} />
@@ -245,6 +253,7 @@ export function DetalleTarea({ tareaId, modoPagina = false, alCerrar, alAbrirTar
           </div>
           <div className="flex items-center gap-1">
             {detalle && <BotonMarcador tipo="Tarea" id={tareaId} />}
+            {detalle && <BotonConexiones tipo="Tarea" id={tareaId} />}
             {detalle && <BotonCronometro tareaId={tareaId} className="mr-1" />}
             {detalle && <BotonIcono icono={Trash2} etiqueta="Eliminar tarea" onClick={() => void eliminar()} className="hover:text-peligro" />}
             <BotonIcono icono={X} etiqueta="Cerrar" onClick={alCerrar} />

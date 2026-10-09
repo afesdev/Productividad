@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ReactFlowProvider } from '@xyflow/react';
 import { AlertCircle, ArrowLeft, Check, Loader2 } from 'lucide-react';
 import { apiFlujos } from '../servicios/api';
@@ -8,6 +8,8 @@ import { notificar } from '../servicios/notificaciones';
 import type { FlujoDetalleDto } from '../servicios/tipos';
 import { unirClases } from '../componentes/ui/primitivos';
 import { EditorFlujo, type EstadoGuardadoFlujo } from '../caracteristicas/flujos/EditorFlujo';
+import { BotonConexiones } from '../caracteristicas/grafo/ComponentesGrafo';
+import { invalidarSistemas, usarSistemas } from '../componentes/bloquesVivos/sistemas';
 
 const textoEstado: Record<EstadoGuardadoFlujo, string> = {
   guardado: 'Guardado',
@@ -19,13 +21,17 @@ const textoEstado: Record<EstadoGuardadoFlujo, string> = {
 /** Editor a pantalla completa de un flujo (React Flow y ELK solo se descargan al abrir esta página). */
 export function PaginaFlujo() {
   const { id } = useParams();
+  // Desde un bloque vivo: "Recorrer" abre el flujo ya en modo recorrido.
+  const [parametros] = useSearchParams();
+  const recorrerAlAbrir = parametros.get('recorrer') === '1';
   const navegar = useNavigate();
   const [flujo, setFlujo] = useState<FlujoDetalleDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [estado, setEstado] = useState<EstadoGuardadoFlujo>('guardado');
   const [titulo, setTitulo] = useState('');
   const [sistema, setSistema] = useState('');
-  const [sistemas, setSistemas] = useState<string[]>([]);
+  // Sugerencias unificadas: sistemas de otros flujos y proyectos de soporte de los tickets.
+  const sistemas = usarSistemas()?.nombres ?? [];
   const guardados = useRef({ titulo: '', sistema: '' });
 
   useEffect(() => {
@@ -42,7 +48,6 @@ export function PaginaFlujo() {
         guardados.current = { titulo: datos.titulo, sistema: datos.sistema ?? '' };
       })
       .catch((errorCarga) => vigente && setError(obtenerMensajeError(errorCarga)));
-    apiFlujos.sistemas().then(setSistemas).catch(() => undefined);
     return () => {
       vigente = false;
     };
@@ -59,6 +64,7 @@ export function PaginaFlujo() {
     try {
       await apiFlujos.actualizarDatos(flujo.id, { titulo: tituloLimpio, sistema: sistema.trim() || null, descripcion: flujo.descripcion });
       guardados.current = { titulo: tituloLimpio, sistema: sistema.trim() };
+      invalidarSistemas();
       setTitulo(tituloLimpio);
     } catch (errorGuardado) {
       notificar.error('No se pudo guardar', errorGuardado);
@@ -118,6 +124,7 @@ export function PaginaFlujo() {
             <option key={opcion} value={opcion} />
           ))}
         </datalist>
+        {flujo && <BotonConexiones tipo="Flujo" id={flujo.id} />}
         <span className={unirClases('flex w-28 shrink-0 items-center justify-end gap-1.5 text-xs', estado === 'error' ? 'text-peligro' : 'text-texto-3')} aria-live="polite">
           {IconoEstado ? <IconoEstado className={unirClases('size-3.5', estado === 'guardando' && 'animate-spin')} /> : <span className="size-1.5 rounded-full bg-aviso" />}
           {textoEstado[estado]}
@@ -126,7 +133,7 @@ export function PaginaFlujo() {
 
       {flujo ? (
         <ReactFlowProvider>
-          <EditorFlujo flujoId={flujo.id} titulo={titulo} contenidoInicial={flujo.contenidoJson} alCambiarEstado={setEstado} />
+          <EditorFlujo flujoId={flujo.id} titulo={titulo} contenidoInicial={flujo.contenidoJson} alCambiarEstado={setEstado} recorrerAlAbrir={recorrerAlAbrir} />
         </ReactFlowProvider>
       ) : (
         <div className="grid flex-1 place-items-center text-sm text-texto-3">

@@ -37,6 +37,18 @@ public sealed class ConfiguracionRol : IEntityTypeConfiguration<Rol>
     }
 }
 
+public sealed class ConfiguracionPreferenciaUsuario : IEntityTypeConfiguration<PreferenciaUsuario>
+{
+    public void Configure(EntityTypeBuilder<PreferenciaUsuario> entidad)
+    {
+        entidad.HasKey(preferencia => preferencia.Id);
+        entidad.Property(preferencia => preferencia.Clave).HasMaxLength(100).IsUnicode(false).IsRequired();
+        entidad.Property(preferencia => preferencia.ValorJson).IsRequired();
+        entidad.HasIndex(preferencia => new { preferencia.UsuarioId, preferencia.Clave }).IsUnique();
+        entidad.HasOne<Usuario>().WithMany().HasForeignKey(preferencia => preferencia.UsuarioId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 public sealed class ConfiguracionUsuarioRol : IEntityTypeConfiguration<UsuarioRol>
 {
     public void Configure(EntityTypeBuilder<UsuarioRol> entidad)

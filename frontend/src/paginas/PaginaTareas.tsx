@@ -1,7 +1,8 @@
+import { ChipEtiqueta } from '../caracteristicas/documentos/SelectorEtiquetas';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
-import { FolderKanban, Plus } from 'lucide-react';
+import { FolderKanban, Plus, Tag } from 'lucide-react';
 import { ArbolProyecto } from '../caracteristicas/tareas/ArbolProyecto';
 import { DetalleTarea } from '../caracteristicas/tareas/DetalleTarea';
 import { TableroKanban } from '../caracteristicas/tareas/TableroKanban';
@@ -11,7 +12,7 @@ import { apiProyectos, apiTareas } from '../servicios/api';
 import { escucharTareasProyecto } from '../servicios/conexionSignalR';
 import { notificar } from '../servicios/notificaciones';
 import type { EstadoTarea, EstructuraProyectoDto, TareaResumenDto } from '../servicios/tipos';
-import { Boton, EncabezadoPagina, EstadoVacio, Esqueleto } from '../componentes/ui/primitivos';
+import { Boton, EncabezadoPagina, EstadoVacio, Esqueleto, unirClases } from '../componentes/ui/primitivos';
 
 /** Reemplaza o agrega la tarea y mantiene el orden por lista e índice. */
 function fusionarTarea(tareas: TareaResumenDto[], actualizada: TareaResumenDto): TareaResumenDto[] {
@@ -80,7 +81,14 @@ export function PaginaTareas() {
     if (estructura && listaSeleccionadaId && !todasLasListas.some((lista) => lista.id === listaSeleccionadaId)) actualizarParametro('lista', null);
   }, [estructura, listaSeleccionadaId, todasLasListas, actualizarParametro]);
 
-  const tareasVisibles = listaSeleccionadaId ? tareas.filter((tarea) => tarea.listaTareaId === listaSeleccionadaId) : tareas;
+  const etiquetaFiltro = parametros.get('etiqueta');
+  const tareasVisibles = tareas
+    .filter((tarea) => !listaSeleccionadaId || tarea.listaTareaId === listaSeleccionadaId)
+    .filter((tarea) => !etiquetaFiltro || (tarea.etiquetas ?? []).some((etiqueta) => etiqueta.id === etiquetaFiltro));
+  // Solo se ofrecen las etiquetas que usan las tareas del proyecto.
+  const etiquetasProyecto = [...new Map(tareas.flatMap((tarea) => tarea.etiquetas ?? []).map((etiqueta) => [etiqueta.id, etiqueta])).values()].sort((a, b) =>
+    a.nombre.localeCompare(b.nombre, 'es'),
+  );
 
   async function moverTarea(tarea: TareaResumenDto, estado: EstadoTarea, antesDeTareaId: string | null) {
     const referencia = antesDeTareaId ? tareas.find((candidata) => candidata.id === antesDeTareaId) : null;
@@ -172,7 +180,30 @@ export function PaginaTareas() {
             )}
           </aside>
           <div className="flex min-w-0 flex-col gap-3">
-            <h2 className="text-sm font-medium text-texto-2">{tituloLista}</h2>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-medium text-texto-2">{tituloLista}</h2>
+              {(etiquetasProyecto.length > 0 || etiquetaFiltro) && (
+                <div className="flex flex-wrap items-center gap-1">
+                  <Tag className="size-3.5 text-texto-3" aria-hidden />
+                  {etiquetasProyecto.map((etiqueta) => (
+                    <button
+                      key={etiqueta.id}
+                      type="button"
+                      aria-pressed={etiquetaFiltro === etiqueta.id}
+                      onClick={() => actualizarParametro('etiqueta', etiquetaFiltro === etiqueta.id ? null : etiqueta.id)}
+                      className={unirClases('rounded-md transition', etiquetaFiltro && etiquetaFiltro !== etiqueta.id && 'opacity-40 hover:opacity-80')}
+                    >
+                      <ChipEtiqueta etiqueta={etiqueta} className={unirClases('h-6', etiquetaFiltro === etiqueta.id && 'ring-2 ring-violet-300')} />
+                    </button>
+                  ))}
+                  {etiquetaFiltro && (
+                    <button type="button" onClick={() => actualizarParametro('etiqueta', null)} className="ml-1 text-xs text-texto-3 hover:text-texto hover:underline">
+                      Quitar filtro
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
             <TableroKanban
               tareas={tareasVisibles}
               nombresListas={nombresListas}

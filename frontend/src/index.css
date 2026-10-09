@@ -346,6 +346,9 @@ body {
 .calendario-outlook .evento-Libre { --fondo-evento: var(--color-superficie-2); --borde-evento: var(--color-borde-fuerte); --texto-evento: var(--color-texto-2); }
 .calendario-outlook .evento-FueraDeOficina { --fondo-evento: var(--color-rose-100); --borde-evento: var(--color-rose-400); --texto-evento: var(--color-rose-950); }
 .calendario-outlook .evento-TrabajandoEnOtroLugar { --fondo-evento: var(--color-sky-100); --borde-evento: var(--color-sky-500); --texto-evento: var(--color-sky-950); }
+.calendario-outlook .evento-trello { --fondo-evento: var(--color-sky-50); --borde-evento: var(--color-sky-400); --texto-evento: var(--color-sky-950); }
+.calendario-outlook .evento-trello-hecho { opacity: 0.55; }
+.calendario-outlook .evento-trello-hecho .truncate { text-decoration: line-through; }
 .calendario-outlook .evento-cancelado { opacity: 0.55; }
 .calendario-outlook .evento-cancelado .truncate { text-decoration: line-through; }
 .calendario-outlook .evento-cal .fc-event-main,
@@ -369,3 +372,8 @@ body {
   from { transform: translateX(-100%); }
   to { transform: translateX(300%); }
 }
+
+/* Bloques vivos (```flujo, ```tickets…): en el editor se ve la tarjeta y el código solo al pulsar </>. */
+.editor-rico .bloque-codigo.es-vivo:not(.ver-codigo) > pre { display: none; }
+.editor-rico .bloque-codigo.es-vivo.ver-codigo > pre { margin-top: 0.25rem; }
+.bloque-vivo a { text-decoration: none; }

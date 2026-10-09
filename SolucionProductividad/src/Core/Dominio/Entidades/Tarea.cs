@@ -27,6 +27,7 @@ public class Tarea : EntidadBase
     public ListaTareas? ListaTareas { get; set; }
     public Tarea? TareaPadre { get; set; }
     public ICollection<Tarea> Subtareas { get; set; } = new List<Tarea>();
+    public ICollection<TareaEtiqueta> Etiquetas { get; set; } = new List<TareaEtiqueta>();
 
     public CuadranteEisenhower Cuadrante => MatrizEisenhower.ObtenerCuadrante(EsUrgente, EsImportante);
 

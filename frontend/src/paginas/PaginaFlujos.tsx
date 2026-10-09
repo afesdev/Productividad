@@ -9,6 +9,7 @@ import { Boton, Campo, EncabezadoPagina, Entrada, EstadoVacio, Esqueleto } from 
 import { Modal } from '../componentes/ui/Modal';
 import { usarConfirmacion } from '../componentes/ui/DialogoConfirmacion';
 import { MenuAcciones } from '../caracteristicas/documentos/MenuAcciones';
+import { invalidarSistemas, usarSistemas } from '../componentes/bloquesVivos/sistemas';
 
 const SinSistema = 'Sin sistema';
 
@@ -17,7 +18,8 @@ export function PaginaFlujos() {
   const confirmar = usarConfirmacion();
   const [flujos, setFlujos] = useState<FlujoResumenDto[] | null>(null);
   const [busqueda, setBusqueda] = useState('');
-  const [sistemas, setSistemas] = useState<string[]>([]);
+  // Sugerencias unificadas: sistemas de otros flujos y proyectos de soporte de los tickets (mismo nombre = mismo sistema).
+  const sistemas = usarSistemas()?.nombres ?? [];
   const [creando, setCreando] = useState(false);
   const [nuevo, setNuevo] = useState({ titulo: '', sistema: '' });
   const [guardando, setGuardando] = useState(false);
@@ -36,10 +38,6 @@ export function PaginaFlujos() {
     return () => window.clearTimeout(temporizador);
   }, [busqueda]);
 
-  useEffect(() => {
-    apiFlujos.sistemas().then(setSistemas).catch(() => undefined);
-  }, []);
-
   const grupos = useMemo(() => {
     const mapa = new Map<string, FlujoResumenDto[]>();
     for (const flujo of flujos ?? []) {
@@ -54,6 +52,7 @@ export function PaginaFlujos() {
     setGuardando(true);
     try {
       const id = await apiFlujos.crear({ titulo: nuevo.titulo.trim(), sistema: nuevo.sistema.trim() || null, descripcion: null });
+      invalidarSistemas();
       navegar(`/flujos/${id}`);
     } catch (error) {
       notificar.error('No se pudo crear el flujo', error);

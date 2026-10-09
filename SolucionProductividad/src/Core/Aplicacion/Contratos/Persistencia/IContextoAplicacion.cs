@@ -43,8 +43,13 @@ public interface IContextoAplicacion
     DbSet<VersionDocumento> VersionesDocumento { get; }
     DbSet<Lienzo> Lienzos { get; }
     DbSet<ConexionCalendario> ConexionesCalendario { get; }
+    DbSet<ConexionTrello> ConexionesTrello { get; }
+    DbSet<VinculoTrello> VinculosTrello { get; }
     DbSet<TableroReporte> TablerosReporte { get; }
     DbSet<Flujo> Flujos { get; }
+    DbSet<PreferenciaUsuario> PreferenciasUsuario { get; }
+    DbSet<TicketEtiqueta> TicketsEtiquetas { get; }
+    DbSet<TareaEtiqueta> TareasEtiquetas { get; }
 
     Task<int> GuardarCambiosAsync(CancellationToken tokenCancelacion = default);
 }

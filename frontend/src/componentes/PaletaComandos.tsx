@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import {
   CalendarDays,
   CornerDownLeft,
+  House,
   FileText,
   Grid2x2,
   KeyRound,
@@ -16,6 +17,7 @@ import {
   SquareCheck,
   SquareKanban,
   Workflow,
+  Waypoints,
 } from 'lucide-react';
 import { apiBusqueda } from '../servicios/api';
 import type { ResultadoBusquedaDto, TipoEntidad } from '../servicios/tipos';
@@ -36,12 +38,14 @@ const accionesRapidas: ElementoPaleta[] = [
   { id: 'nueva-tarea', grupo: 'Acciones', titulo: 'Nueva tarea', icono: Plus, ruta: '/tareas/nueva' },
   { id: 'ir-tickets', grupo: 'Ir a', titulo: 'Tickets', icono: LifeBuoy, ruta: '/tickets' },
   { id: 'nuevo-documento', grupo: 'Acciones', titulo: 'Nuevo documento', icono: Plus, ruta: '/documentos/nuevo' },
-  { id: 'ir-tablero', grupo: 'Ir a', titulo: 'Analítica', icono: LayoutDashboard, ruta: '/' },
+  { id: 'ir-inicio', grupo: 'Ir a', titulo: 'Inicio', icono: House, ruta: '/' },
+  { id: 'ir-tablero', grupo: 'Ir a', titulo: 'Analítica', icono: LayoutDashboard, ruta: '/analitica' },
   { id: 'ir-tareas', grupo: 'Ir a', titulo: 'Tareas', icono: SquareKanban, ruta: '/tareas' },
   { id: 'ir-matriz', grupo: 'Ir a', titulo: 'Matriz de Eisenhower', icono: Grid2x2, ruta: '/matriz' },
   { id: 'ir-documentos', grupo: 'Ir a', titulo: 'Documentos', icono: FileText, ruta: '/documentos' },
   { id: 'ir-boveda', grupo: 'Ir a', titulo: 'Bóveda de secretos', icono: KeyRound, ruta: '/boveda' },
   { id: 'ir-flujos', grupo: 'Ir a', titulo: 'Flujos', icono: Workflow, ruta: '/flujos' },
+  { id: 'ir-grafo', grupo: 'Ir a', titulo: 'Grafo de conocimiento', icono: Waypoints, ruta: '/grafo' },
 ];
 
 const configuracionTipo: Record<TipoEntidad, { grupo: string; icono: Icono }> = {
@@ -198,7 +202,7 @@ export function PaletaComandos() {
                 value={termino}
                 onChange={(evento) => setTermino(evento.target.value)}
                 onKeyDown={alPresionarTeclaEntrada}
-                placeholder="Buscar o escribir un comando… (ej. WEB-105)"
+                placeholder="Buscar o escribir un comando… (ej. WEB-105 o #etiqueta)"
                 role="combobox"
                 aria-expanded="true"
                 aria-controls="lista-paleta"

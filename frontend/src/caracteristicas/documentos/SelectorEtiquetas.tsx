@@ -6,6 +6,7 @@ import { notificar } from '../../servicios/notificaciones';
 import type { EtiquetaConConteoDto, EtiquetaDto } from '../../servicios/tipos';
 import { unirClases } from '../../componentes/ui/primitivos';
 import { coloresPaleta, paleta } from './paleta';
+import { recargarCatalogoEtiquetas } from './catalogoEtiquetas';
 
 export function ChipEtiqueta({ etiqueta, alQuitar, className }: { etiqueta: EtiquetaDto; alQuitar?: () => void; className?: string }) {
   return (
@@ -21,20 +22,21 @@ export function ChipEtiqueta({ etiqueta, alQuitar, className }: { etiqueta: Etiq
 }
 
 /**
- * Etiquetas del documento: chips + popover para marcar/desmarcar o crear una nueva escribiendo su nombre.
+ * Etiquetas de un documento, ticket o tarea (catálogo compartido): chips + popover para marcar/desmarcar o crear una
+ * nueva escribiendo su nombre. `asignar` guarda y devuelve las etiquetas finales.
  */
 export function SelectorEtiquetas({
-  documentoId,
+  asignar,
   asignadas,
   disponibles,
   soloLectura,
   alCambiar,
 }: {
-  documentoId: string;
+  asignar: (etiquetaIds: string[]) => Promise<EtiquetaDto[]>;
   asignadas: EtiquetaDto[];
   disponibles: EtiquetaConConteoDto[];
   soloLectura?: boolean;
-  /** Etiquetas finales del documento; `nuevaCreada` indica que hay que recargar la estructura. */
+  /** Etiquetas finales; `nuevaCreada` indica que hay que recargar el catálogo. */
   alCambiar: (etiquetas: EtiquetaDto[], nuevaCreada: boolean) => void;
 }) {
   const [abierto, setAbierto] = useState(false);
@@ -65,7 +67,8 @@ export function SelectorEtiquetas({
 
   async function guardar(ids: string[], nuevaCreada = false) {
     try {
-      const resultado = await apiDocumentos.asignarEtiquetas(documentoId, ids);
+      const resultado = await asignar(ids);
+      if (nuevaCreada) void recargarCatalogoEtiquetas().catch(() => undefined);
       alCambiar(resultado, nuevaCreada);
     } catch (errorAsignacion) {
       notificar.error('No se pudieron actualizar las etiquetas', errorAsignacion);

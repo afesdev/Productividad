@@ -52,6 +52,8 @@ export interface TareaResumenDto {
   fechaVencimiento: string | null;
   indiceOrden: number;
   totalSubtareas: number;
+  /** Etiquetas (catálogo compartido con documentos y tickets). */
+  etiquetas: EtiquetaDto[];
   subtareasCompletadas: number;
   clave: string;
   cuadrante: CuadranteEisenhower;
@@ -325,6 +327,8 @@ export interface TicketResumenDto {
   numeroExterno: string | null;
   proyectos: ProyectoTicketDto[];
   estadoSla: EstadoSla;
+  /** Etiquetas (catálogo compartido con documentos y tareas). */
+  etiquetas: EtiquetaDto[];
 }
 
 /** Proyecto (categoría) asignado a un ticket. */
@@ -798,4 +802,164 @@ export interface FlujoDetalleDto {
   contenidoJson: string;
   fechaCreacion: string;
   fechaActualizacion: string;
+}
+
+// ---------- Inicio ----------
+
+/** Tarea abierta con vencimiento (agenda de todos los proyectos). */
+export interface TareaAgendaDto {
+  id: string;
+  clave: string;
+  titulo: string;
+  nombreProyecto: string;
+  estado: EstadoTarea;
+  prioridad: Prioridad;
+  fechaVencimiento: string;
+}
+
+// ---------- Grafo de conocimiento ----------
+
+export type TipoNodoGrafo = 'Documento' | 'Tarea' | 'Ticket' | 'RegistroDiario' | 'Flujo' | 'Etiqueta' | 'Sistema';
+export type TipoAristaGrafo = 'Enlace' | 'Etiqueta' | 'Sistema' | 'Relacion' | 'Jerarquia';
+
+export interface NodoGrafoDto {
+  /** "Tipo:Guid" (o "Sistema:nombre"): único en el grafo. */
+  id: string;
+  tipo: TipoNodoGrafo;
+  /** Para abrirlo; en un sistema, el proyecto de soporte si existe. */
+  entidadId: string | null;
+  titulo: string;
+  referencia: string | null;
+  color: string | null;
+}
+
+export interface AristaGrafoDto {
+  origen: string;
+  destino: string;
+  tipo: TipoAristaGrafo;
+}
+
+export interface GrafoDto {
+  nodos: NodoGrafoDto[];
+  aristas: AristaGrafoDto[];
+  /** Se alcanzó el límite de nodos de algún tipo. */
+  recortado: boolean;
+}
+
+// ---------- Trello (solo lectura) ----------
+
+/** `apiKey` null = el servidor no tiene Trello configurado (falta Trello:ApiKey). */
+export interface EstadoConexionTrelloDto {
+  apiKey: string | null;
+  conectado: boolean;
+  nombreMiembro: string | null;
+  usuarioMiembro: string | null;
+  fechaConexion: string | null;
+}
+
+export interface MiembroTrelloDto {
+  id: string;
+  nombreCompleto: string;
+  usuario: string;
+  iniciales: string;
+  urlAvatar: string | null;
+}
+
+/** `color`: nombre de Trello ("green", "red_dark"…) o null. */
+export interface EtiquetaTrelloDto {
+  id: string;
+  nombre: string;
+  color: string | null;
+}
+
+export interface TableroTrelloResumenDto {
+  id: string;
+  nombre: string;
+  url: string;
+  colorFondo: string | null;
+  imagenFondo: string | null;
+  nombreWorkspace: string | null;
+  destacado: boolean;
+  esAdmin: boolean;
+  fechaUltimaActividad: string | null;
+}
+
+export interface ListaTrelloDto {
+  id: string;
+  nombre: string;
+  posicion: number;
+}
+
+export interface TarjetaTrelloDto {
+  id: string;
+  nombre: string;
+  idTablero: string;
+  idLista: string;
+  posicion: number;
+  inicio: string | null;
+  vencimiento: string | null;
+  vencimientoCompletado: boolean;
+  etiquetas: EtiquetaTrelloDto[];
+  idMiembros: string[];
+  url: string;
+  comentarios: number;
+  adjuntos: number;
+  elementosChecklist: number;
+  elementosChecklistHechos: number;
+  tieneDescripcion: boolean;
+  colorPortada: string | null;
+  /** Adjunto usado como portada (imagen), o null. */
+  idAdjuntoPortada: string | null;
+}
+
+export interface TableroTrelloDto {
+  id: string;
+  nombre: string;
+  url: string;
+  colorFondo: string | null;
+  imagenFondo: string | null;
+  listas: ListaTrelloDto[];
+  tarjetas: TarjetaTrelloDto[];
+  miembros: MiembroTrelloDto[];
+  etiquetas: EtiquetaTrelloDto[];
+}
+
+export interface TarjetaAsignadaTrelloDto {
+  tarjeta: TarjetaTrelloDto;
+  nombreTablero: string;
+  nombreLista: string;
+  colorFondoTablero: string | null;
+}
+
+export interface TarjetaTrelloDetalleDto {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  url: string;
+  idTablero: string;
+  nombreTablero: string;
+  nombreLista: string;
+  inicio: string | null;
+  vencimiento: string | null;
+  vencimientoCompletado: boolean;
+  etiquetas: EtiquetaTrelloDto[];
+  miembros: MiembroTrelloDto[];
+  checklists: { id: string; nombre: string; elementos: { id: string; nombre: string; hecho: boolean }[] }[];
+  comentarios: { id: string; autor: string; urlAvatarAutor: string | null; texto: string; fecha: string }[];
+  /** `esImagen`: imagen subida que la app puede mostrar a través de la API. */
+  adjuntos: { id: string; nombre: string; url: string; fecha: string | null; esImagen: boolean }[];
+}
+
+/** Tarjeta de Trello vinculada a una tarea o a un ticket (`claveDestino`/`tituloDestino` del que corresponda). */
+export interface VinculoTrelloDto {
+  id: string;
+  idTarjeta: string;
+  nombreTarjeta: string;
+  nombreTablero: string;
+  urlTarjeta: string;
+  tareaId: string | null;
+  ticketId: string | null;
+  claveDestino: string | null;
+  tituloDestino: string | null;
+  fechaVinculo: string;
 }

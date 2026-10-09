@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import {
+  Waypoints,
+  Columns3,
+  House,
   Workflow,
   CalendarDays,
   FileSpreadsheet,
@@ -35,6 +38,7 @@ import { rutaDeEntidad } from '../servicios/rutas';
 import { cambiarTema, usarTema, type Tema } from '../servicios/tema';
 import { ChipCronometro } from '../caracteristicas/tiempo/ControlesCronometro';
 import { ChipReunionSiguiente } from '../caracteristicas/calendario/ChipReunionSiguiente';
+import { registrarNavegador } from '../servicios/navegacion';
 import { PaletaComandos } from './PaletaComandos';
 import { BotonPlegarPanel } from './ui/BotonPlegarPanel';
 import { BotonIcono, unirClases, type Icono } from './ui/primitivos';
@@ -59,7 +63,13 @@ const tonos = {
 };
 
 const secciones: { titulo: string; enlaces: EnlaceNavegacion[] }[] = [
-  { titulo: 'General', enlaces: [{ ruta: '/', etiqueta: 'Analítica', icono: LayoutDashboard, tono: tonos.cielo }] },
+  {
+    titulo: 'General',
+    enlaces: [
+      { ruta: '/', etiqueta: 'Inicio', icono: House, tono: tonos.violeta },
+      { ruta: '/analitica', etiqueta: 'Analítica', icono: LayoutDashboard, tono: tonos.cielo },
+    ],
+  },
   {
     titulo: 'Trabajo',
     enlaces: [
@@ -67,6 +77,7 @@ const secciones: { titulo: string; enlaces: EnlaceNavegacion[] }[] = [
       { ruta: '/tareas', etiqueta: 'Tareas', icono: SquareKanban, tono: tonos.violeta },
       { ruta: '/matriz', etiqueta: 'Eisenhower', icono: Grid2x2, tono: tonos.ambar },
       { ruta: '/tickets', etiqueta: 'Tickets', icono: LifeBuoy, tono: tonos.rosa },
+      { ruta: '/trello', etiqueta: 'Trello', icono: Columns3, tono: tonos.cielo },
       { ruta: '/tiempo', etiqueta: 'Tiempo', icono: Timer, tono: tonos.indigo },
       { ruta: '/reporte', etiqueta: 'Reporte', icono: FileSpreadsheet, tono: tonos.esmeralda },
     ],
@@ -78,6 +89,7 @@ const secciones: { titulo: string; enlaces: EnlaceNavegacion[] }[] = [
       { ruta: '/documentos', etiqueta: 'Documentos', icono: FileText, tono: tonos.esmeralda },
       { ruta: '/lienzos', etiqueta: 'Lienzos', icono: PenTool, tono: tonos.melocoton },
       { ruta: '/flujos', etiqueta: 'Flujos', icono: Workflow, tono: tonos.violeta },
+      { ruta: '/grafo', etiqueta: 'Grafo', icono: Waypoints, tono: tonos.cielo },
       { ruta: '/boveda', etiqueta: 'Bóveda', icono: KeyRound, tono: tonos.turquesa },
     ],
   },
@@ -114,6 +126,12 @@ export function DisposicionPrincipal() {
 
   // Ctrl/⌘ + J desde cualquier pantalla: abrir el diario de hoy con la captura rápida enfocada.
   const navegar = useNavigate();
+
+  // Los bloques vivos del editor se dibujan fuera del router: navegan a través de este registro.
+  useEffect(() => {
+    registrarNavegador((ruta) => navegar(ruta));
+    return () => registrarNavegador(null);
+  }, [navegar]);
   useEffect(() => {
     const alPresionar = (evento: KeyboardEvent) => {
       if ((evento.ctrlKey || evento.metaKey) && evento.key.toLowerCase() === 'j') {

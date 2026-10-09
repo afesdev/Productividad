@@ -32,6 +32,17 @@ public sealed class OpcionesGitHub
     public string UrlApi { get; set; } = "https://api.github.com";
 }
 
+/// <summary>Integración de solo lectura con Trello. La API key sale del Power-Up creado en trello.com/power-ups/admin.</summary>
+public sealed class OpcionesTrello
+{
+    public const string Seccion = "Trello";
+
+    /// <summary>API key del Power-Up. Es pública por diseño de Trello (viaja en la URL de autorización), pero se guarda en user-secrets como el resto.</summary>
+    public string ApiKey { get; set; } = string.Empty;
+
+    public string UrlApi { get; set; } = "https://api.trello.com/1";
+}
+
 /// <summary>Proveedor de IA con API compatible con OpenAI. Por defecto Gemini; para Ollama local: UrlBase "http://localhost:11434/v1/".</summary>
 public sealed class OpcionesIA
 {

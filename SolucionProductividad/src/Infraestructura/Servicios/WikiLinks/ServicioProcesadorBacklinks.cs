@@ -27,6 +27,10 @@ public sealed partial class ServicioProcesadorBacklinks : IServicioProcesadorBac
     [GeneratedRegex(@"^(?:#|[A-Za-z]{2,10}-)(\d+)$", RegexOptions.CultureInvariant)]
     private static partial Regex ExpresionTarea();
 
+    // [[Flujo: Título]] (la búsqueda global usa "Flujo: Título" como referencia de los flujos).
+    [GeneratedRegex(@"^flujo\s*:\s*(.+)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex ExpresionFlujo();
+
     public async Task<int> ProcesarWikiLinksAsync(string contenidoMarkdown, Guid entidadOrigenId, string tipoOrigen, CancellationToken tokenCancelacion = default)
     {
         if (!Enum.TryParse<TipoEntidad>(tipoOrigen, ignoreCase: true, out var tipoEntidadOrigen))
@@ -69,6 +73,7 @@ public sealed partial class ServicioProcesadorBacklinks : IServicioProcesadorBac
         var numerosTicket = new List<int>();
         var numerosTarea = new List<int>();
         var textosDocumento = new List<string>();
+        var titulosFlujo = new List<string>();
 
         foreach (var destino in destinos)
         {
@@ -76,6 +81,8 @@ public sealed partial class ServicioProcesadorBacklinks : IServicioProcesadorBac
                 numerosTicket.Add(numeroTicket);
             else if (ExpresionTarea().Match(destino) is { Success: true } coincidenciaTarea && int.TryParse(coincidenciaTarea.Groups[1].Value, out var numeroTarea))
                 numerosTarea.Add(numeroTarea);
+            else if (ExpresionFlujo().Match(destino) is { Success: true } coincidenciaFlujo)
+                titulosFlujo.Add(coincidenciaFlujo.Groups[1].Value.Trim());
             else
                 textosDocumento.Add(destino);
         }
@@ -102,6 +109,12 @@ public sealed partial class ServicioProcesadorBacklinks : IServicioProcesadorBac
                 .Select(documento => documento.Id)
                 .ToListAsync(tokenCancelacion);
             resueltos.UnionWith(idsDocumentos.Select(id => (TipoEntidad.Documento, id)));
+        }
+
+        if (titulosFlujo.Count > 0)
+        {
+            var idsFlujos = await _contexto.Flujos.Where(flujo => titulosFlujo.Contains(flujo.Titulo)).Select(flujo => flujo.Id).ToListAsync(tokenCancelacion);
+            resueltos.UnionWith(idsFlujos.Select(id => (TipoEntidad.Flujo, id)));
         }
 
         return resueltos;

@@ -8,7 +8,9 @@ import { notificar } from '../servicios/notificaciones';
 import type { ConteoTicketsDto, TicketResumenDto, VistaTickets } from '../servicios/tipos';
 import { ChipProyecto } from '../caracteristicas/tickets/ProyectosTicket';
 import { etiquetaTipo, InsigniaEstado, InsigniaPrioridad } from '../caracteristicas/tickets/presentacionTickets';
-import { Boton, EncabezadoPagina, EstadoVacio, Entrada, Esqueleto, unirClases } from '../componentes/ui/primitivos';
+import { Boton, EncabezadoPagina, EstadoVacio, Entrada, Esqueleto, Selector, unirClases } from '../componentes/ui/primitivos';
+import { ChipEtiqueta } from '../caracteristicas/documentos/SelectorEtiquetas';
+import { usarCatalogoEtiquetas } from '../caracteristicas/documentos/catalogoEtiquetas';
 
 const vistas: { valor: VistaTickets; etiqueta: string; conteo?: keyof ConteoTicketsDto }[] = [
   { valor: 'MisAbiertos', etiqueta: 'Mis tickets', conteo: 'misAbiertos' },
@@ -47,6 +49,13 @@ export function PaginaTickets() {
   const [parametros, setParametros] = useSearchParams();
   const vista = (parametros.get('vista') as VistaTickets | null) ?? 'MisAbiertos';
   const proyectoId = parametros.get('proyecto') ?? '';
+  const etiquetaId = parametros.get('etiqueta') ?? '';
+  const catalogoEtiquetas = usarCatalogoEtiquetas();
+  /** Cambia la vista conservando los filtros de proyecto y etiqueta. */
+  const filtros = (cambios: Record<string, string>) => {
+    const resultado: Record<string, string> = { vista, ...(proyectoId ? { proyecto: proyectoId } : {}), ...(etiquetaId ? { etiqueta: etiquetaId } : {}), ...cambios };
+    return Object.fromEntries(Object.entries(resultado).filter(([, valor]) => valor));
+  };
   const [texto, setTexto] = useState('');
   const [tickets, setTickets] = useState<TicketResumenDto[] | null>(null);
   const [conteos, setConteos] = useState<ConteoTicketsDto | null>(null);
@@ -72,12 +81,12 @@ export function PaginaTickets() {
     setTickets(null);
     const temporizador = window.setTimeout(() => {
       apiTickets
-        .listar(vista, texto.trim(), undefined, proyectoId || undefined)
+        .listar(vista, texto.trim(), undefined, proyectoId || undefined, etiquetaId || undefined)
         .then(setTickets)
         .catch((errorCarga) => notificar.error('No se pudieron cargar los tickets', errorCarga));
     }, 200);
     return () => window.clearTimeout(temporizador);
-  }, [vista, texto, proyectoId]);
+  }, [vista, texto, proyectoId, etiquetaId]);
 
   return (
     <>
@@ -109,7 +118,7 @@ export function PaginaTickets() {
                 key={opcion.valor}
                 role="tab"
                 aria-selected={activa}
-                onClick={() => setParametros(proyectoId ? { vista: opcion.valor, proyecto: proyectoId } : { vista: opcion.valor }, { replace: true })}
+                onClick={() => setParametros(filtros({ vista: opcion.valor }), { replace: true })}
                 className={unirClases('relative flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-sm', activa ? 'font-medium text-texto' : 'text-texto-2 hover:text-texto')}
               >
                 {activa && <motion.span layoutId="vista-tickets" className="absolute inset-0 rounded-md bg-superficie-2" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
@@ -148,6 +157,21 @@ export function PaginaTickets() {
               </kbd>
             )}
           </div>
+          {catalogoEtiquetas.length > 0 && (
+            <Selector
+              value={etiquetaId}
+              onChange={(evento) => setParametros(filtros({ etiqueta: evento.target.value }), { replace: true })}
+              aria-label="Filtrar por etiqueta"
+              className="w-auto min-w-40"
+            >
+              <option value="">Todas las etiquetas</option>
+              {catalogoEtiquetas.map((etiqueta) => (
+                <option key={etiqueta.id} value={etiqueta.id}>
+                  #{etiqueta.nombre}
+                </option>
+              ))}
+            </Selector>
+          )}
         </div>
       </div>
 
@@ -216,10 +240,13 @@ export function PaginaTickets() {
                       <span>{etiquetaTipo[ticket.tipo]}</span>
                       <span className="truncate">· {ticket.nombreSolicitante}</span>
                     </span>
-                    {ticket.proyectos.length > 0 && (
+                    {(ticket.proyectos.length > 0 || (ticket.etiquetas?.length ?? 0) > 0) && (
                       <span className="mt-1 flex flex-wrap gap-1">
                         {ticket.proyectos.map((proyecto) => (
                           <ChipProyecto key={proyecto.id} proyecto={proyecto} />
+                        ))}
+                        {(ticket.etiquetas ?? []).map((etiqueta) => (
+                          <ChipEtiqueta key={etiqueta.id} etiqueta={etiqueta} className="h-5 px-1.5 text-[11px]" />
                         ))}
                       </span>
                     )}

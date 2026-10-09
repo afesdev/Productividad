@@ -63,8 +63,13 @@ public sealed class ContextoProductividad : DbContext, IContextoAplicacion
     public DbSet<VersionDocumento> VersionesDocumento => Set<VersionDocumento>();
     public DbSet<Lienzo> Lienzos => Set<Lienzo>();
     public DbSet<ConexionCalendario> ConexionesCalendario => Set<ConexionCalendario>();
+    public DbSet<ConexionTrello> ConexionesTrello => Set<ConexionTrello>();
+    public DbSet<VinculoTrello> VinculosTrello => Set<VinculoTrello>();
     public DbSet<TableroReporte> TablerosReporte => Set<TableroReporte>();
     public DbSet<Flujo> Flujos => Set<Flujo>();
+    public DbSet<PreferenciaUsuario> PreferenciasUsuario => Set<PreferenciaUsuario>();
+    public DbSet<TicketEtiqueta> TicketsEtiquetas => Set<TicketEtiqueta>();
+    public DbSet<TareaEtiqueta> TareasEtiquetas => Set<TareaEtiqueta>();
 
     public Task<int> GuardarCambiosAsync(CancellationToken tokenCancelacion = default) => SaveChangesAsync(tokenCancelacion);
 
@@ -125,8 +130,16 @@ public sealed class ContextoProductividad : DbContext, IContextoAplicacion
             !_aplicarFiltrosUsuario || DocumentosMarkdown.Any(documento => documento.Id == version.DocumentoId && documento.CreadoPor == UsuarioIdActual));
         constructorModelo.Entity<Lienzo>().HasQueryFilter(lienzo => !_aplicarFiltrosUsuario || lienzo.UsuarioId == UsuarioIdActual);
         constructorModelo.Entity<ConexionCalendario>().HasQueryFilter(conexion => !_aplicarFiltrosUsuario || conexion.UsuarioId == UsuarioIdActual);
+        constructorModelo.Entity<ConexionTrello>().HasQueryFilter(conexion => !_aplicarFiltrosUsuario || conexion.UsuarioId == UsuarioIdActual);
+        constructorModelo.Entity<VinculoTrello>().HasQueryFilter(vinculo => !_aplicarFiltrosUsuario || vinculo.UsuarioId == UsuarioIdActual);
         constructorModelo.Entity<TableroReporte>().HasQueryFilter(tablero => !_aplicarFiltrosUsuario || tablero.UsuarioId == UsuarioIdActual);
         constructorModelo.Entity<Flujo>().HasQueryFilter(flujo => !_aplicarFiltrosUsuario || flujo.UsuarioId == UsuarioIdActual);
+        constructorModelo.Entity<PreferenciaUsuario>().HasQueryFilter(preferencia => !_aplicarFiltrosUsuario || preferencia.UsuarioId == UsuarioIdActual);
+        // Las relaciones con etiquetas siguen la visibilidad de su etiqueta (catálogo propio del usuario).
+        constructorModelo.Entity<TicketEtiqueta>().HasQueryFilter(relacion =>
+            !_aplicarFiltrosUsuario || EtiquetasDocumento.Any(etiqueta => etiqueta.Id == relacion.EtiquetaId && etiqueta.UsuarioId == UsuarioIdActual));
+        constructorModelo.Entity<TareaEtiqueta>().HasQueryFilter(relacion =>
+            !_aplicarFiltrosUsuario || EtiquetasDocumento.Any(etiqueta => etiqueta.Id == relacion.EtiquetaId && etiqueta.UsuarioId == UsuarioIdActual));
     }
 
     /// <summary>

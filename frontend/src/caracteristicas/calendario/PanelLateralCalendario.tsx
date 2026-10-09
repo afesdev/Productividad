@@ -137,7 +137,13 @@ function MiniCalendario({ rango, ahora, version, alElegirDia }: Pick<Propiedades
 
 // ---------- Próximas reuniones ----------
 
-function ProximasReuniones({ ahora, version, alSeleccionar }: Pick<PropiedadesPanel, 'ahora' | 'version' | 'alSeleccionar'>) {
+/** También se usa en el widget "Agenda" de Inicio (con `sinTitulo`, porque el widget ya tiene el suyo). */
+export function ProximasReuniones({
+  ahora,
+  version,
+  alSeleccionar,
+  sinTitulo = false,
+}: Pick<PropiedadesPanel, 'ahora' | 'version' | 'alSeleccionar'> & { sinTitulo?: boolean }) {
   const [eventos, setEventos] = useState<EventoCalendarioDto[] | null>(null);
   const [recarga, setRecarga] = useState(0);
 
@@ -186,7 +192,7 @@ function ProximasReuniones({ ahora, version, alSeleccionar }: Pick<PropiedadesPa
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="px-1 text-xs font-medium uppercase tracking-wider text-texto-3">Próximas reuniones</h2>
+      {!sinTitulo && <h2 className="px-1 text-xs font-medium uppercase tracking-wider text-texto-3">Próximas reuniones</h2>}
 
       {eventos === null ? (
         <div className="flex flex-col gap-2">

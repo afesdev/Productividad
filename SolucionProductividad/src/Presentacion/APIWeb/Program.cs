@@ -151,8 +151,19 @@ aplicacion.UseAuthentication();
 aplicacion.UseAuthorization();
 aplicacion.UseRateLimiter();
 
+// Las respuestas de la API son datos del usuario y cambian a cada momento: el navegador no debe guardarlas.
+aplicacion.Use(async (contexto, siguiente) =>
+{
+    if (contexto.Request.Path.StartsWithSegments("/api")) contexto.Response.Headers.CacheControl = "no-store";
+    await siguiente();
+});
+
 aplicacion.MapControllers();
 aplicacion.MapHub<HubNotificaciones>(HubNotificaciones.Ruta);
+
+// Una ruta /api desconocida es un 404, no la web: si no, el navegador recibía index.html con 200 (y podía guardarlo
+// en caché) para endpoints que aún no existían en una API sin actualizar.
+aplicacion.MapFallback("/api/{**resto}", () => Results.NotFound()).AllowAnonymous();
 
 // Cualquier ruta no-API (rutas del enrutador de React) devuelve index.html.
 // AllowAnonymous: la política por defecto exige sesión y bloquearía la carga inicial de la web.

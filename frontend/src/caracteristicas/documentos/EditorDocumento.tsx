@@ -44,6 +44,7 @@ import { MenuAcciones } from './MenuAcciones';
 import { ModalMoverDocumento } from './ModalesOrganizacion';
 import { PanelVersiones } from './PanelVersiones';
 import { SelectorEtiquetas } from './SelectorEtiquetas';
+import { BotonConexiones } from '../grafo/ComponentesGrafo';
 import { paleta, portadaNeutra } from './paleta';
 
 type EstadoGuardado = 'guardado' | 'pendiente' | 'guardando' | 'error';
@@ -500,6 +501,7 @@ export function EditorDocumento({
               <History className="size-4" />
               <span className="hidden tabular-nums sm:inline">{totalVersiones}</span>
             </button>
+            <BotonConexiones tipo="Documento" id={documento.id} className="h-9" />
             <BotonIcono
               icono={ListTree}
               etiqueta={indiceVisible ? 'Ocultar índice' : 'Mostrar índice'}
@@ -640,7 +642,7 @@ export function EditorDocumento({
           <div className="mb-6 mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-texto-3">
             <SelectorVigencia documento={documento} documentos={documentos} soloLectura={enPapelera} alCambiar={actualizarVigencia} />
             <SelectorEtiquetas
-              documentoId={documento.id}
+              asignar={(ids) => apiDocumentos.asignarEtiquetas(documento.id, ids)}
               asignadas={etiquetas}
               disponibles={estructura?.etiquetas ?? []}
               soloLectura={enPapelera}

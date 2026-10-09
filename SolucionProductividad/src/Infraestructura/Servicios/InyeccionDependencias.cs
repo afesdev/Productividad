@@ -9,6 +9,7 @@ using SolucionProductividad.Servicios.IA;
 using SolucionProductividad.Servicios.Opciones;
 using SolucionProductividad.Servicios.Reporte;
 using SolucionProductividad.Servicios.Seguridad;
+using SolucionProductividad.Servicios.Trello;
 using SolucionProductividad.Servicios.WikiLinks;
 
 namespace SolucionProductividad.Servicios;
@@ -35,6 +36,14 @@ public static class InyeccionDependencias
                 cliente.MaxResponseContentBufferSize = 15 * 1024 * 1024;
             })
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+
+        // Trello (solo lectura, token por usuario). Comparte la caché en memoria con el calendario.
+        servicios.AddOptions<OpcionesTrello>().Bind(configuracion.GetSection(OpcionesTrello.Seccion));
+        servicios.AddHttpClient<IServicioTrello, ServicioTrello>(cliente =>
+        {
+            cliente.Timeout = TimeSpan.FromSeconds(30);
+            cliente.MaxResponseContentBufferSize = 20 * 1024 * 1024;
+        });
 
         servicios.AddSingleton<IServicioAlmacenamientoFirebase, ServicioAlmacenamientoFirebase>();
         servicios.AddSingleton<IServicioCifradoBoveda, ServicioCifradoBoveda>();

@@ -139,3 +139,43 @@ public sealed class AlmacenamientoFalso : IServicioAlmacenamientoFirebase
         return Task.CompletedTask;
     }
 }
+
+/// <summary>Trello con un miembro y una tarjeta fija; responde por id largo o enlace corto.</summary>
+public sealed class TrelloFalso : IServicioTrello
+{
+    public const string IdMiembro = "aaaaaaaaaaaaaaaaaaaaaaaa";
+    public const string IdTarjeta = "eeeeeeeeeeeeeeeeeeeeeeee";
+    public const string EnlaceCorto = "AbCd1234";
+    public static readonly DateTime Vencimiento = new(2026, 11, 3, 15, 0, 0, DateTimeKind.Utc);
+
+    public static readonly TarjetaTrelloDetalle Tarjeta = new(
+        IdTarjeta, "Revisar [SLA] de soporte", "Mirar los tiempos de **primera respuesta**.", $"https://trello.com/c/{EnlaceCorto}", "bbbbbbbbbbbbbbbbbbbbbbbb",
+        "Soporte", "Por hacer", null, Vencimiento, false, [], [],
+        [new ChecklistTrello("k1", "Pasos", [new ElementoChecklistTrello("i1", "Exportar datos", true), new ElementoChecklistTrello("i2", "Comparar con el SLA", false)])],
+        [], []);
+
+    public string? ApiKey => "clave-de-prueba";
+
+    public Task<MiembroTrello> ObtenerMiembroActualAsync(string token, CancellationToken tokenCancelacion = default) =>
+        Task.FromResult(new MiembroTrello(IdMiembro, "Ana Pérez", "ana", "AP", null));
+
+    public Task<IReadOnlyList<TableroTrelloResumen>> ListarTablerosAsync(string token, string idMiembro, bool omitirCache, CancellationToken tokenCancelacion = default) =>
+        Task.FromResult<IReadOnlyList<TableroTrelloResumen>>([]);
+
+    public Task<TableroTrello> ObtenerTableroAsync(string token, string idTablero, bool omitirCache, CancellationToken tokenCancelacion = default) =>
+        throw new NotSupportedException();
+
+    public Task<TarjetaTrelloDetalle> ObtenerTarjetaAsync(string token, string idTarjeta, CancellationToken tokenCancelacion = default) =>
+        idTarjeta is IdTarjeta or EnlaceCorto ? Task.FromResult(Tarjeta) : throw new Dominio.Excepciones.ExcepcionDominio("No se encontró la tarjeta de Trello o ya no tienes acceso.");
+
+    public Task<IReadOnlyList<TarjetaAsignadaTrello>> BuscarTarjetasAsync(string token, string texto, CancellationToken tokenCancelacion = default) =>
+        Task.FromResult<IReadOnlyList<TarjetaAsignadaTrello>>([]);
+
+    public Task<IReadOnlyList<TarjetaAsignadaTrello>> ListarMisTarjetasAsync(string token, string idMiembro, bool omitirCache, CancellationToken tokenCancelacion = default) =>
+        Task.FromResult<IReadOnlyList<TarjetaAsignadaTrello>>([]);
+
+    public Task<ImagenAdjuntoTrello> DescargarImagenAdjuntoAsync(string token, string idTarjeta, string idAdjunto, CancellationToken tokenCancelacion = default) =>
+        Task.FromResult(new ImagenAdjuntoTrello([0x89, 0x50, 0x4E, 0x47], "image/png"));
+
+    public Task RevocarTokenAsync(string token, CancellationToken tokenCancelacion = default) => Task.CompletedTask;
+}

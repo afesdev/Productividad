@@ -21,6 +21,26 @@ const pilaModales: symbol[] = [];
 const clasesAncho = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' };
 
 /**
+ * Capa propia (visor, panel) que comparte la pila de modales: Esc la cierra solo a ella si es la de arriba.
+ * Devuelve la función para quitarla.
+ */
+export function registrarCapaEsc(alCerrar: () => void): () => void {
+  const id = Symbol();
+  pilaModales.push(id);
+  const alPresionarTecla = (evento: KeyboardEvent) => {
+    if (evento.key === 'Escape' && pilaModales[pilaModales.length - 1] === id) {
+      evento.stopPropagation();
+      alCerrar();
+    }
+  };
+  window.addEventListener('keydown', alPresionarTecla, true);
+  return () => {
+    window.removeEventListener('keydown', alPresionarTecla, true);
+    pilaModales.splice(pilaModales.indexOf(id), 1);
+  };
+}
+
+/**
  * Modal para formularios cortos. Formularios largos van en una vista completa (ver VistaFormulario).
  * Cierra con Esc o clic en el fondo, bloquea el scroll de la página y devuelve el foco al elemento anterior.
  */

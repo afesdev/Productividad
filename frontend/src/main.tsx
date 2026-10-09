@@ -7,6 +7,7 @@ import { ProveedorSesion, RutaProtegida } from './caracteristicas/autenticacion/
 import { DisposicionPrincipal } from './componentes/DisposicionPrincipal';
 import { ProveedorConfirmacion } from './componentes/ui/DialogoConfirmacion';
 import { ProveedorRevisionIA } from './componentes/editor/RevisionIA';
+import { ProveedorBloquesVivos } from './componentes/bloquesVivos/ModalBloqueVivo';
 import { PaginaAutenticacion } from './paginas/PaginaAutenticacion';
 import { PaginaBoveda } from './paginas/PaginaBoveda';
 import { PaginaTiempo } from './paginas/PaginaTiempo';
@@ -25,6 +26,10 @@ import { PaginaTareas } from './paginas/PaginaTareas';
 import { PaginaLienzos } from './paginas/PaginaLienzos';
 import { PaginaReporte } from './paginas/PaginaReporte';
 import { PaginaFlujos } from './paginas/PaginaFlujos';
+import { PaginaInicio } from './paginas/PaginaInicio';
+import { PaginaGrafo } from './paginas/PaginaGrafo';
+import { PaginaTrello } from './paginas/PaginaTrello';
+import { PaginaTableroTrello } from './paginas/PaginaTableroTrello';
 import { usarTema } from './servicios/tema';
 import './index.css';
 
@@ -80,7 +85,8 @@ createRoot(document.getElementById('raiz')!).render(
                 </RutaProtegida>
               }
             >
-              <Route index element={<PaginaTablero />} />
+              <Route index element={<PaginaInicio />} />
+              <Route path="analitica" element={<PaginaTablero />} />
               <Route path="tareas" element={<PaginaTareas />} />
               <Route path="tareas/nueva" element={<PaginaNuevaTarea />} />
               <Route path="tareas/:id" element={<PaginaDetalleTarea />} />
@@ -94,6 +100,7 @@ createRoot(document.getElementById('raiz')!).render(
               <Route path="lienzos" element={<PaginaLienzos />} />
               <Route path="lienzos/:id" element={lienzoDiferido} />
               <Route path="flujos" element={<PaginaFlujos />} />
+              <Route path="grafo" element={<PaginaGrafo />} />
               <Route path="flujos/:id" element={flujoDiferido} />
               <Route path="diario" element={<PaginaDiario />} />
               <Route path="diario/registro/:id" element={<RedireccionRegistroDiario />} />
@@ -104,10 +111,13 @@ createRoot(document.getElementById('raiz')!).render(
               <Route path="tickets/repositorios/:id/grafo" element={<PaginaGrafoRepositorio />} />
               <Route path="tickets/proyectos" element={<PaginaProyectosSoporte />} />
               <Route path="tickets/:id" element={<PaginaDetalleTicket />} />
+              <Route path="trello" element={<PaginaTrello />} />
+              <Route path="trello/tableros/:id" element={<PaginaTableroTrello />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <ProveedorRevisionIA />
+          <ProveedorBloquesVivos />
         </ProveedorConfirmacion>
       </ProveedorSesion>
       <NotificacionesConTema />

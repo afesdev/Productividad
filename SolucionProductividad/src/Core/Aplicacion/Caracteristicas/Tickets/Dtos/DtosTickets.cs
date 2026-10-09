@@ -1,4 +1,5 @@
 using SolucionProductividad.Aplicacion.Caracteristicas.Archivos.Dtos;
+using SolucionProductividad.Aplicacion.Caracteristicas.Documentos;
 using SolucionProductividad.Dominio.Enumeraciones;
 
 namespace SolucionProductividad.Aplicacion.Caracteristicas.Tickets.Dtos;
@@ -28,7 +29,8 @@ public sealed record TicketResumenDto(
     DateTime? FechaLimiteResolucion,
     DateTime? FechaResolucion,
     string? NumeroExterno,
-    IReadOnlyList<ProyectoTicketDto> Proyectos)
+    IReadOnlyList<ProyectoTicketDto> Proyectos,
+    IReadOnlyList<EtiquetaDto> Etiquetas)
 {
     public string Clave => $"TCK-{NumeroTicket}";
 

@@ -1,4 +1,5 @@
 using MediatR;
+using SolucionProductividad.Aplicacion.Caracteristicas.Etiquetas;
 using Microsoft.AspNetCore.Mvc;
 using SolucionProductividad.Aplicacion.Caracteristicas.Documentos;
 using SolucionProductividad.Aplicacion.Caracteristicas.Tareas.Comandos;
@@ -61,6 +62,18 @@ public class TareasController : ControllerBase
         await _mediador.Send(new EliminarTareaComando(id));
         return NoContent();
     }
+
+    public sealed record CuerpoEtiquetas(IReadOnlyList<Guid> EtiquetaIds);
+
+    /// <summary>Reemplaza las etiquetas de la tarea (catálogo compartido con documentos y tickets).</summary>
+    [HttpPut("{id:guid}/etiquetas")]
+    public async Task<ActionResult<TareaResumenDto>> AsignarEtiquetas(Guid id, [FromBody] CuerpoEtiquetas cuerpo) =>
+        Ok(await _mediador.Send(new AsignarEtiquetasTareaComando(id, cuerpo.EtiquetaIds)));
+
+    /// <summary>Tareas abiertas de todos los proyectos que vencen en los próximos días (incluidas las vencidas).</summary>
+    [HttpGet("agenda")]
+    public async Task<ActionResult<IReadOnlyList<TareaAgendaDto>>> ObtenerAgenda([FromQuery] int dias = 7, [FromQuery] int limite = 30) =>
+        Ok(await _mediador.Send(new ObtenerAgendaTareasConsulta(dias, limite)));
 
     [HttpGet("matriz-eisenhower")]
     public async Task<ActionResult<MatrizEisenhowerDto>> ObtenerMatrizEisenhower([FromQuery] Guid proyectoId)

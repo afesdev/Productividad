@@ -4,10 +4,10 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import esLocale from '@fullcalendar/core/locales/es';
 import type { DatesSetArg, DayHeaderContentArg, EventClickArg, EventContentArg, EventInput, EventSourceFuncArg } from '@fullcalendar/core';
-import { CalendarDays, ChevronLeft, ChevronRight, Keyboard, Link2, Lock, MapPin, RefreshCw, Unplug, Video } from 'lucide-react';
-import { apiCalendario } from '../servicios/api';
+import { CalendarDays, Columns3, ChevronLeft, ChevronRight, Keyboard, Link2, Lock, MapPin, RefreshCw, Unplug, Video } from 'lucide-react';
+import { apiCalendario, apiTrello } from '../servicios/api';
 import { notificar } from '../servicios/notificaciones';
-import type { EstadoConexionCalendarioDto, EventoCalendarioDto } from '../servicios/tipos';
+import type { EstadoConexionCalendarioDto, EventoCalendarioDto, TarjetaAsignadaTrelloDto } from '../servicios/tipos';
 import { Boton, BotonIcono, Campo, EncabezadoPagina, Entrada, Esqueleto, MensajeError, Tarjeta, unirClases } from '../componentes/ui/primitivos';
 import { Modal } from '../componentes/ui/Modal';
 import { usarConfirmacion } from '../componentes/ui/DialogoConfirmacion';
@@ -16,6 +16,8 @@ import { avisarCambioCalendario } from '../caracteristicas/calendario/ChipReunio
 import { DetalleEvento, EnlaceUnirse } from '../caracteristicas/calendario/DetalleEvento';
 import { PanelLateralCalendario } from '../caracteristicas/calendario/PanelLateralCalendario';
 import { fechaLocal, sePuedeUnir, ubicacionUtil } from '../caracteristicas/calendario/utilidadesCalendario';
+import { ModalTarjetaTrello } from '../caracteristicas/trello/ModalTarjetaTrello';
+import { trelloConectado } from '../caracteristicas/trello/conexionTrello';
 
 type Vista = 'timeGridDay' | 'semanaLaboral' | 'timeGridWeek' | 'dayGridMonth';
 
@@ -214,6 +216,20 @@ const aEventoCalendario = (evento: EventoCalendarioDto): EventInput => ({
   extendedProps: { evento },
 });
 
+/** Vencimiento de una tarjeta de Trello como evento de todo el día (en la fecha local del vencimiento). */
+function aEventoTrello(asignada: TarjetaAsignadaTrelloDto): EventInput {
+  const vence = new Date(asignada.tarjeta.vencimiento!);
+  const dia = `${vence.getFullYear()}-${String(vence.getMonth() + 1).padStart(2, '0')}-${String(vence.getDate()).padStart(2, '0')}`;
+  return {
+    id: `trello-${asignada.tarjeta.id}`,
+    title: asignada.tarjeta.nombre,
+    start: dia,
+    allDay: true,
+    classNames: ['evento-cal', 'evento-trello', asignada.tarjeta.vencimientoCompletado ? 'evento-trello-hecho' : ''].filter(Boolean),
+    extendedProps: { trello: asignada },
+  };
+}
+
 const formatoDiaSemana = new Intl.DateTimeFormat('es', { weekday: 'short' });
 const textoAtajos = 'Atajos: T hoy · ← → anterior / siguiente · D día · L semana laboral · S semana · M mes · R actualizar';
 
@@ -233,6 +249,7 @@ const escribiendo = (destino: EventTarget | null) =>
 function VistaCalendario({ alCambiarEnlace, alDesconectar }: { alCambiarEnlace: () => void; alDesconectar: () => void }) {
   const calendario = useRef<FullCalendar>(null);
   const forzarActualizacion = useRef(false);
+  const forzarTrello = useRef(false);
   // Tras "Actualizar", la barra superior se refresca cuando el backend ya tiene la descarga nueva.
   const avisarAlTerminar = useRef(false);
   const [vista, setVista] = useState<Vista>(leerVista);
@@ -241,6 +258,7 @@ function VistaCalendario({ alCambiarEnlace, alDesconectar }: { alCambiarEnlace: 
   const [cargando, setCargando] = useState(false);
   const [version, setVersion] = useState(0);
   const [seleccionado, setSeleccionado] = useState<EventoCalendarioDto | null>(null);
+  const [tarjetaAbierta, setTarjetaAbierta] = useState<string | null>(null);
   const ahora = usarAhora();
 
   const api = () => calendario.current?.getApi();
@@ -257,6 +275,22 @@ function VistaCalendario({ alCambiarEnlace, alDesconectar }: { alCambiarEnlace: 
       });
   }, []);
 
+  // Segunda fuente: vencimientos de tus tarjetas de Trello (solo si hay cuenta conectada; un fallo no rompe el calendario).
+  const cargarTrello = useCallback((info: EventSourceFuncArg, exito: (eventos: EventInput[]) => void) => {
+    const actualizar = forzarTrello.current;
+    forzarTrello.current = false;
+    void trelloConectado()
+      .then((conectado) => (conectado ? apiTrello.misTarjetas(actualizar) : []))
+      .then((tarjetas) =>
+        exito(
+          tarjetas
+            .filter((asignada) => asignada.tarjeta.vencimiento && new Date(asignada.tarjeta.vencimiento) >= info.start && new Date(asignada.tarjeta.vencimiento) < info.end)
+            .map(aEventoTrello),
+        ),
+      )
+      .catch(() => exito([]));
+  }, []);
+
   function cambiarVista(nueva: Vista, fecha?: Date) {
     setVista(nueva);
     api()?.changeView(nueva, fecha);
@@ -269,6 +303,7 @@ function VistaCalendario({ alCambiarEnlace, alDesconectar }: { alCambiarEnlace: 
 
   function actualizar() {
     forzarActualizacion.current = true;
+    forzarTrello.current = true;
     avisarAlTerminar.current = true;
     api()?.refetchEvents();
     setVersion((actual) => actual + 1);
@@ -383,7 +418,7 @@ function VistaCalendario({ alCambiarEnlace, alDesconectar }: { alCambiarEnlace: 
             businessHours={{ daysOfWeek: [1, 2, 3, 4, 5], startTime: '08:00', endTime: '18:00' }}
             dayMaxEventRows={4}
             eventMinHeight={22}
-            events={cargarEventos}
+            eventSources={[cargarEventos, cargarTrello]}
             loading={(cargandoAhora: boolean) => {
               setCargando(cargandoAhora);
               if (!cargandoAhora && avisarAlTerminar.current) {
@@ -401,7 +436,9 @@ function VistaCalendario({ alCambiarEnlace, alDesconectar }: { alCambiarEnlace: 
               // El botón "Unirse" dentro del evento abre Teams; no debe abrir además el detalle.
               if ((info.jsEvent.target as Element | null)?.closest('.evento-unirse')) return;
               info.jsEvent.preventDefault();
-              setSeleccionado(info.event.extendedProps.evento as EventoCalendarioDto);
+              const trello = info.event.extendedProps.trello as TarjetaAsignadaTrelloDto | undefined;
+              if (trello) setTarjetaAbierta(trello.tarjeta.id);
+              else setSeleccionado(info.event.extendedProps.evento as EventoCalendarioDto);
             }}
             eventContent={contenidoEvento}
           />
@@ -409,6 +446,7 @@ function VistaCalendario({ alCambiarEnlace, alDesconectar }: { alCambiarEnlace: 
       </div>
 
       <DetalleEvento evento={seleccionado} alCerrar={() => setSeleccionado(null)} />
+      <ModalTarjetaTrello idTarjeta={tarjetaAbierta} alCerrar={() => setTarjetaAbierta(null)} />
     </div>
   );
 }
@@ -435,6 +473,14 @@ function CabeceraDia({ info }: { info: DayHeaderContentArg }) {
 
 /** Bloque del evento: más detalle cuanto más largo es (como Teams), y "Unirse" directo cuando la reunión está por empezar o en curso. */
 function ContenidoEvento({ info, ahora }: { info: EventContentArg; ahora: Date }) {
+  const trello = info.event.extendedProps.trello as TarjetaAsignadaTrelloDto | undefined;
+  if (trello)
+    return (
+      <div className="flex min-w-0 items-center gap-1 overflow-hidden px-1.5 py-0.5 text-xs leading-tight" title={`${trello.nombreTablero} · ${trello.nombreLista}`}>
+        <Columns3 className="size-3 shrink-0 opacity-70" aria-label="Tarjeta de Trello" />
+        <span className="truncate font-medium">{info.event.title}</span>
+      </div>
+    );
   const evento = info.event.extendedProps.evento as EventoCalendarioDto;
   const iconos = (
     <>

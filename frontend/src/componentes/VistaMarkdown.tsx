@@ -5,6 +5,8 @@ import { configuracionCallout, type TipoCallout } from './editor/BloquesDocument
 import { dibujarMermaid, olvidarDiagrama } from './editor/mermaid';
 import { repararMarkdown } from './editor/repararMarkdown';
 import { rehypeTablasHtml } from './editor/tablaHtml';
+import { BloqueVivo } from './bloquesVivos/BloqueVivo';
+import { esBloqueVivo } from './bloquesVivos/formato';
 
 /** Nodo HAST mínimo (el árbol HTML que react-markdown genera antes de renderizar). */
 interface NodoHast {
@@ -69,16 +71,27 @@ function DiagramaMermaid({ codigo }: { codigo: string }) {
  * Renderiza Markdown (GFM). react-markdown ignora el HTML embebido; la única excepción son las tablas con celdas
  * combinadas, que rehypeTablasHtml reconstruye con lista blanca de etiquetas y atributos (sin riesgo de XSS).
  */
-export function VistaMarkdown({ contenido }: { contenido: string }) {
+export function VistaMarkdown({
+  contenido,
+  imagen,
+}: {
+  contenido: string;
+  /** Sustituye una imagen por un componente propio (p. ej. imágenes que necesitan autenticación); null = imagen normal. */
+  imagen?: (src: string, alt: string) => ReactNode | null;
+}) {
   return (
     <div className="contenido-markdown text-sm">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeTablasHtml, rehypeBloquesDocumentacion]}
         components={{
+          img: ({ src, alt }) => (imagen && typeof src === 'string' ? imagen(src, alt ?? '') : null) ?? <img src={typeof src === 'string' ? src : undefined} alt={alt ?? ''} />,
           pre: ({ node, children }) => {
             const codigo = (node as NodoHast | undefined)?.children?.find((hijo) => hijo.tagName === 'code');
             const clases = codigo?.properties?.className;
+            // Bloques vivos (```flujo, ```tickets…): contenido de otros módulos, siempre actualizado.
+            const lenguaje = Array.isArray(clases) ? String(clases.find((clase) => String(clase).startsWith('language-')) ?? '').slice(9) : '';
+            if (esBloqueVivo(lenguaje)) return <BloqueVivo tipo={lenguaje} contenido={textoDe(codigo).trimEnd()} />;
             return Array.isArray(clases) && clases.includes('language-mermaid') ? (
               <DiagramaMermaid codigo={textoDe(codigo).trimEnd()} />
             ) : (

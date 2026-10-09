@@ -62,6 +62,7 @@ public sealed class BaseDatosPrueba : IAsyncLifetime
         servicios.AddSingleton<INotificadorTiempoReal>(notificador);
         servicios.AddSingleton<IServicioAlmacenamientoFirebase>(almacenamiento);
         servicios.AddSingleton<IServicioGitHub>(gitHub);
+        servicios.AddSingleton<IServicioTrello>(new TrelloFalso());
         servicios.AddSingleton<IGeneradorExcelReporte, GeneradorExcelReporte>();
         servicios.AddSingleton<IServicioHashContrasena, ServicioHashContrasena>();
         servicios.AddSingleton<IServicioCifradoBoveda>(new ServicioCifradoBoveda(Options.Create(new OpcionesBoveda { LlaveMaestraBase64 = Convert.ToBase64String(new byte[32]) })));

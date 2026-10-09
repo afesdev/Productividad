@@ -101,6 +101,8 @@ interface Propiedades {
   titulo: string;
   contenidoInicial: string;
   alCambiarEstado: (estado: EstadoGuardadoFlujo) => void;
+  /** Empieza directamente en modo recorrido (enlace "Recorrer" de los bloques vivos). */
+  recorrerAlAbrir?: boolean;
 }
 
 /**
@@ -108,7 +110,7 @@ interface Propiedades {
  * medidas), así que solo hay guardado e historial cuando cambia algo real. Se guarda lo último derivado, nunca lo que
  * haya en la instancia al desmontar (misma lección que en los lienzos).
  */
-export function EditorFlujo({ flujoId, titulo, contenidoInicial, alCambiarEstado }: Propiedades) {
+export function EditorFlujo({ flujoId, titulo, contenidoInicial, alCambiarEstado, recorrerAlAbrir = false }: Propiedades) {
   const inicial = useMemo(() => leerContenido(contenidoInicial), [contenidoInicial]);
   const [nodos, setNodos, alCambiarNodos] = useNodesState<NodoPasoFlujo>(aNodos(inicial));
   const [aristas, setAristas, alCambiarAristas] = useEdgesState<Edge>(aAristas(inicial));
@@ -367,9 +369,10 @@ export function EditorFlujo({ flujoId, titulo, contenidoInicial, alCambiarEstado
     });
   }
 
-  // Encuadre inicial.
+  // Encuadre inicial (o recorrido directo si se pidió).
   useEffect(() => {
-    if (nodos.length > 0) requestAnimationFrame(() => void fitView({ padding: 0.15 }));
+    if (nodos.length > 0 && recorrerAlAbrir) requestAnimationFrame(() => iniciarRecorrido());
+    else if (nodos.length > 0) requestAnimationFrame(() => void fitView({ padding: 0.15 }));
     // Solo al abrir el flujo.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -523,7 +526,6 @@ export function EditorFlujo({ flujoId, titulo, contenidoInicial, alCambiarEstado
             snapGrid={[8, 8]}
             minZoom={0.2}
             maxZoom={2}
-            proOptions={{ hideAttribution: true }}
           >
             <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} />
             <Controls showInteractive={false} position="bottom-left" />

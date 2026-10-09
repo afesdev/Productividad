@@ -4,6 +4,10 @@ import type { RespuestaSesion } from './tipos';
 
 export const clienteApi = axios.create({ baseURL: '/api/v1', withCredentials: true });
 
+// Que el navegador nunca responda una petición de la app desde su caché (p. ej. una respuesta vieja de una ruta que
+// antes no existía en la API): siempre se pregunta al servidor.
+clienteApi.defaults.headers.get['Cache-Control'] = 'no-cache';
+
 clienteApi.interceptors.request.use((configuracion) => {
   const { tokenAcceso } = almacenSesion.obtener();
   if (tokenAcceso) configuracion.headers.Authorization = `Bearer ${tokenAcceso}`;

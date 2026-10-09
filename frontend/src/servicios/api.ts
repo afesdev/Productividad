@@ -1,5 +1,13 @@
 import { clienteApi } from './clienteApi';
 import type {
+  EstadoConexionTrelloDto,
+  VinculoTrelloDto,
+  TableroTrelloDto,
+  TableroTrelloResumenDto,
+  TarjetaAsignadaTrelloDto,
+  TarjetaTrelloDetalleDto,
+  GrafoDto,
+  TareaAgendaDto,
   FlujoDetalleDto,
   FlujoResumenDto,
   DatosFilaReporte,
@@ -130,6 +138,10 @@ export const apiTareas = {
   mover: (id: string, listaTareaId: string, estado: EstadoTarea, antesDeTareaId: string | null) =>
     datos(clienteApi.patch<TareaResumenDto>(`/tareas/${id}/mover`, { listaTareaId, estado, antesDeTareaId })),
   eliminar: (id: string) => clienteApi.delete(`/tareas/${id}`),
+  /** Reemplaza las etiquetas de la tarea; devuelve la tarea actualizada. */
+  asignarEtiquetas: (id: string, etiquetaIds: string[]) => datos(clienteApi.put<TareaResumenDto>(`/tareas/${id}/etiquetas`, { etiquetaIds })),
+  /** Abiertas de todos los proyectos que vencen en los próximos `dias` (incluidas las vencidas). */
+  agenda: (dias = 7) => datos(clienteApi.get<TareaAgendaDto[]>('/tareas/agenda', { params: { dias } })),
   matrizEisenhower: (proyectoId: string) =>
     datos(clienteApi.get<MatrizEisenhowerDto>('/tareas/matriz-eisenhower', { params: { proyectoId } })),
   moverCuadrante: (id: string, cuadrante: CuadranteEisenhower) =>
@@ -239,6 +251,18 @@ export const apiFlujos = {
   generarConIA: (descripcion: string) => datos(clienteApi.post<{ texto: string }>('/flujos/generar', { descripcion })).then((respuesta) => respuesta.texto),
 };
 
+/** Preferencias de la interfaz guardadas en el servidor (JSON por clave). */
+export const apiPreferencias = {
+  /** null si aún no hay nada guardado (la API responde 204). */
+  obtener: <T,>(clave: string) =>
+    clienteApi.get<{ valorJson: string } | ''>(`/preferencias/${clave}`).then((respuesta) => (respuesta.data ? (JSON.parse(respuesta.data.valorJson) as T) : null)),
+  guardar: (clave: string, valor: unknown) => clienteApi.put(`/preferencias/${clave}`, { valorJson: JSON.stringify(valor) }),
+};
+
+export const apiGrafo = {
+  obtener: () => datos(clienteApi.get<GrafoDto>('/grafo')),
+};
+
 export const apiCalendario = {
   conexion: () => datos(clienteApi.get<EstadoConexionCalendarioDto>('/calendario/conexion')),
   conectar: (urlIcs: string) => datos(clienteApi.put<EstadoConexionCalendarioDto>('/calendario/conexion', { urlIcs })),
@@ -246,6 +270,28 @@ export const apiCalendario = {
   /** `actualizar` ignora la caché del backend (unos minutos) y vuelve a descargar el calendario de Outlook. */
   eventos: (desde: string, hasta: string, actualizar = false, senal?: AbortSignal) =>
     datos(clienteApi.get<EventoCalendarioDto[]>('/calendario/eventos', { params: { desde, hasta, actualizar }, signal: senal })),
+};
+
+export const apiTrello = {
+  conexion: () => datos(clienteApi.get<EstadoConexionTrelloDto>('/trello/conexion')),
+  conectar: (token: string) => datos(clienteApi.put<EstadoConexionTrelloDto>('/trello/conexion', { token })),
+  desconectar: () => clienteApi.delete('/trello/conexion'),
+  /** `actualizar` ignora la caché del backend (un par de minutos). */
+  tableros: (actualizar = false) => datos(clienteApi.get<TableroTrelloResumenDto[]>('/trello/tableros', { params: { actualizar } })),
+  tablero: (id: string, actualizar = false) => datos(clienteApi.get<TableroTrelloDto>(`/trello/tableros/${id}`, { params: { actualizar } })),
+  tarjeta: (id: string) => datos(clienteApi.get<TarjetaTrelloDetalleDto>(`/trello/tarjetas/${id}`)),
+  misTarjetas: (actualizar = false) => datos(clienteApi.get<TarjetaAsignadaTrelloDto[]>('/trello/mis-tarjetas', { params: { actualizar } })),
+  /** Un enlace o id de tarjeta devuelve esa tarjeta; otro texto busca en Trello. */
+  buscar: (texto: string, senal?: AbortSignal) => datos(clienteApi.get<TarjetaAsignadaTrelloDto[]>('/trello/tarjetas/buscar', { params: { texto }, signal: senal })),
+  /** Crea una tarea a partir de la tarjeta y la vincula; devuelve el Id de la tarea. */
+  importar: (idTarjeta: string, listaTareaId: string) => datos(clienteApi.post<string>(`/trello/tarjetas/${idTarjeta}/importar`, { listaTareaId })),
+  vinculos: (filtro: { tareaId?: string; ticketId?: string; idTarjeta?: string }) => datos(clienteApi.get<VinculoTrelloDto[]>('/trello/vinculos', { params: filtro })),
+  vincular: (tarjeta: string, destino: { tareaId?: string; ticketId?: string }) =>
+    datos(clienteApi.post<VinculoTrelloDto>('/trello/vinculos', { tarjeta, tareaId: destino.tareaId ?? null, ticketId: destino.ticketId ?? null })),
+  desvincular: (id: string) => clienteApi.delete(`/trello/vinculos/${id}`),
+  /** Imagen subida a una tarjeta: Trello exige autenticación, así que pasa por la API. */
+  imagenAdjunto: (idTarjeta: string, idAdjunto: string) =>
+    datos(clienteApi.get<Blob>(`/trello/tarjetas/${idTarjeta}/adjuntos/${idAdjunto}/imagen`, { responseType: 'blob' })),
 };
 
 export const apiAnalitica = {
@@ -285,8 +331,10 @@ export interface DatosTicket {
 }
 
 export const apiTickets = {
-  listar: (vista: VistaTickets, texto?: string, tipo?: TipoTicket, proyectoId?: string) =>
-    datos(clienteApi.get<TicketResumenDto[]>('/tickets', { params: { vista, texto: texto || undefined, tipo, proyectoId } })),
+  listar: (vista: VistaTickets, texto?: string, tipo?: TipoTicket, proyectoId?: string, etiquetaId?: string) =>
+    datos(clienteApi.get<TicketResumenDto[]>('/tickets', { params: { vista, texto: texto || undefined, tipo, proyectoId, etiquetaId } })),
+  /** Reemplaza las etiquetas del ticket (catálogo compartido). */
+  asignarEtiquetas: (id: string, etiquetaIds: string[]) => datos(clienteApi.put<EtiquetaDto[]>(`/tickets/${id}/etiquetas`, { etiquetaIds })),
   conteos: () => datos(clienteApi.get<ConteoTicketsDto>('/tickets/conteos')),
   obtener: (id: string) => datos(clienteApi.get<TicketDetalleDto>(`/tickets/${id}`)),
   usuariosAsignables: () => datos(clienteApi.get<UsuarioAsignableDto[]>('/tickets/usuarios-asignables')),

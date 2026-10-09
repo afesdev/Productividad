@@ -1,4 +1,5 @@
 using MediatR;
+using SolucionProductividad.Aplicacion.Caracteristicas.Etiquetas;
 using Microsoft.AspNetCore.Mvc;
 using SolucionProductividad.Aplicacion.Caracteristicas.Documentos;
 using SolucionProductividad.Aplicacion.Caracteristicas.Tickets.Comandos;
@@ -44,8 +45,16 @@ public class TicketsController : ControllerBase
         [FromQuery] VistaTickets vista = VistaTickets.Abiertos,
         [FromQuery] string? texto = null,
         [FromQuery] TipoTicket? tipo = null,
-        [FromQuery] Guid? proyectoId = null) =>
-        Ok(await _mediador.Send(new ListarTicketsConsulta(vista, texto, tipo, proyectoId)));
+        [FromQuery] Guid? proyectoId = null,
+        [FromQuery] Guid? etiquetaId = null) =>
+        Ok(await _mediador.Send(new ListarTicketsConsulta(vista, texto, tipo, proyectoId, etiquetaId)));
+
+    public sealed record CuerpoEtiquetas(IReadOnlyList<Guid> EtiquetaIds);
+
+    /// <summary>Reemplaza las etiquetas del ticket (catálogo compartido con documentos y tareas).</summary>
+    [HttpPut("{id:guid}/etiquetas")]
+    public async Task<ActionResult<IReadOnlyList<EtiquetaDto>>> AsignarEtiquetas(Guid id, [FromBody] CuerpoEtiquetas cuerpo) =>
+        Ok(await _mediador.Send(new AsignarEtiquetasTicketComando(id, cuerpo.EtiquetaIds)));
 
     [HttpGet("conteos")]
     public async Task<ActionResult<ConteoTicketsDto>> ObtenerConteos() => Ok(await _mediador.Send(new ObtenerConteoTicketsConsulta()));

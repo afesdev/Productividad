@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using SolucionProductividad.Aplicacion.Caracteristicas.Archivos.Dtos;
+using SolucionProductividad.Aplicacion.Caracteristicas.Documentos;
 using SolucionProductividad.Dominio.Entidades;
 using SolucionProductividad.Dominio.Enumeraciones;
 using SolucionProductividad.Dominio.ObjetosValor;
@@ -21,7 +22,8 @@ public sealed record TareaResumenDto(
     DateTime? FechaVencimiento,
     int IndiceOrden,
     int TotalSubtareas,
-    int SubtareasCompletadas)
+    int SubtareasCompletadas,
+    IReadOnlyList<EtiquetaDto> Etiquetas)
 {
     /// <summary>Identificador legible, ej. "WEB-105". Se usa también en WikiLinks.</summary>
     public string Clave => $"{ClavePrefijoProyecto}-{NumeroTarea}";
@@ -63,5 +65,7 @@ public static class ProyeccionesTarea
         tarea.FechaVencimiento,
         tarea.IndiceOrden,
         tarea.Subtareas.Count(),
-        tarea.Subtareas.Count(subtarea => subtarea.Estado == EstadoTarea.Completada));
+        tarea.Subtareas.Count(subtarea => subtarea.Estado == EstadoTarea.Completada),
+        tarea.Etiquetas.OrderBy(relacion => relacion.Etiqueta!.Nombre)
+            .Select(relacion => new EtiquetaDto(relacion.EtiquetaId, relacion.Etiqueta!.Nombre, relacion.Etiqueta.Color)).ToList());
 }

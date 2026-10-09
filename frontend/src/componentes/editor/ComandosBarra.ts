@@ -22,6 +22,8 @@ import {
   TriangleAlert,
   Workflow,
 } from 'lucide-react';
+import { configuracionBloque, tiposBloqueVivo, type TipoBloqueVivo } from '../bloquesVivos/formato';
+import { solicitarBloqueVivo } from '../bloquesVivos/ModalBloqueVivo';
 import type { ElementoSugerencia } from './ListaSugerencias';
 import { crearRenderizadorSugerencias } from './renderizadorSugerencias';
 
@@ -88,7 +90,42 @@ function crearComandos(opciones: OpcionesComandosBarra): Comando[] {
       } },
     { id: 'enlace', titulo: 'Enlazar página o tarea', descripcion: 'Escribe [[ y busca', icono: Link2, grupo: 'Insertar', palabrasClave: ['enlace', 'wikilink', 'link', 'referencia'],
       ejecutar: (editor, rango) => editor.chain().focus().deleteRange(rango).insertContent('[[').run() },
+    ...tiposBloqueVivo.map((tipo) => comandoBloqueVivo(tipo)),
   ];
+}
+
+const palabrasBloque: Record<TipoBloqueVivo, string[]> = {
+  flujo: ['flujo', 'proceso', 'diagrama', 'incrustar'],
+  lienzo: ['lienzo', 'pizarra', 'excalidraw', 'incrustar'],
+  tickets: ['tickets', 'incidencias', 'tabla', 'incrustar', 'sistema'],
+  tareas: ['tareas', 'pendientes', 'lista', 'incrustar'],
+  documentos: ['documentos', 'paginas', 'etiqueta', 'carpeta', 'incrustar'],
+  flujos: ['flujos', 'procesos', 'sistema', 'incrustar'],
+};
+
+/** Inserta un bloque vivo: primero se elige qué incrustar y luego se añade el bloque donde estaba el "/". */
+function comandoBloqueVivo(tipo: TipoBloqueVivo): Comando {
+  const { etiqueta, descripcion, icono } = configuracionBloque[tipo];
+  return {
+    id: `vivo-${tipo}`,
+    titulo: etiqueta,
+    descripcion,
+    icono,
+    grupo: 'Incrustar (vivo)',
+    palabrasClave: palabrasBloque[tipo],
+    ejecutar: (editor, rango) => {
+      editor.chain().focus().deleteRange(rango).run();
+      const posicion = editor.state.selection.from;
+      void solicitarBloqueVivo(tipo).then((texto) => {
+        if (texto === null || editor.isDestroyed) return;
+        editor
+          .chain()
+          .focus(posicion)
+          .insertContent({ type: 'codeBlock', attrs: { language: tipo }, content: texto ? [{ type: 'text', text: texto }] : [] })
+          .run();
+      });
+    },
+  };
 }
 
 const normalizar = (texto: string) => texto.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
