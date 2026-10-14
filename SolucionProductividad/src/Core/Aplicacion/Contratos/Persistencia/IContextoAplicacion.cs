@@ -50,6 +50,8 @@ public interface IContextoAplicacion
     DbSet<PreferenciaUsuario> PreferenciasUsuario { get; }
     DbSet<TicketEtiqueta> TicketsEtiquetas { get; }
     DbSet<TareaEtiqueta> TareasEtiquetas { get; }
+    DbSet<Snippet> Snippets { get; }
+    DbSet<SnippetEtiqueta> SnippetsEtiquetas { get; }
 
     Task<int> GuardarCambiosAsync(CancellationToken tokenCancelacion = default);
 }

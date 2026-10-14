@@ -29,6 +29,9 @@ import { PaginaFlujos } from './paginas/PaginaFlujos';
 import { PaginaInicio } from './paginas/PaginaInicio';
 import { PaginaGrafo } from './paginas/PaginaGrafo';
 import { PaginaTrello } from './paginas/PaginaTrello';
+import { PaginaCierreDia } from './paginas/PaginaCierreDia';
+import { PaginaSnippets } from './paginas/PaginaSnippets';
+import { ProveedorSelectorSnippets } from './caracteristicas/snippets/SelectorSnippets';
 import { PaginaTableroTrello } from './paginas/PaginaTableroTrello';
 import { usarTema } from './servicios/tema';
 import './index.css';
@@ -94,6 +97,7 @@ createRoot(document.getElementById('raiz')!).render(
               <Route path="tiempo" element={<PaginaTiempo />} />
               <Route path="calendario" element={calendarioDiferido} />
               <Route path="reporte" element={<PaginaReporte />} />
+              <Route path="cierre" element={<PaginaCierreDia />} />
               <Route path="documentos" element={documentosDiferidos} />
               <Route path="documentos/:id" element={documentosDiferidos} />
               <Route path="boveda" element={<PaginaBoveda />} />
@@ -113,11 +117,13 @@ createRoot(document.getElementById('raiz')!).render(
               <Route path="tickets/:id" element={<PaginaDetalleTicket />} />
               <Route path="trello" element={<PaginaTrello />} />
               <Route path="trello/tableros/:id" element={<PaginaTableroTrello />} />
+              <Route path="snippets" element={<PaginaSnippets />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <ProveedorRevisionIA />
           <ProveedorBloquesVivos />
+          <ProveedorSelectorSnippets />
         </ProveedorConfirmacion>
       </ProveedorSesion>
       <NotificacionesConTema />

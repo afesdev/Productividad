@@ -14,6 +14,8 @@ import {
   ListPlus,
   MessageSquare,
   Paperclip,
+  Pin,
+  PinOff,
   Square,
   Users,
 } from 'lucide-react';
@@ -25,6 +27,7 @@ import { Modal } from '../../componentes/ui/Modal';
 import { Boton, Esqueleto, unirClases, type Icono } from '../../componentes/ui/primitivos';
 import { VistaMarkdown } from '../../componentes/VistaMarkdown';
 import { ModalImportarTarjetaTrello } from './ImportarTarjetaTrello';
+import { usarPanelReferencia } from '../referencia/ContextoPanelReferencia';
 import { ImagenTrello, VisorImagen, referenciaAdjunto } from './ImagenTrello';
 import { AvatarTrello, ChipEtiquetaTrello, InsigniaVencimiento, estadoVencimiento, formatearVencimiento } from './presentacionTrello';
 
@@ -37,6 +40,7 @@ export function ModalTarjetaTrello({ idTarjeta, alCerrar }: { idTarjeta: string 
   const [vinculos, setVinculos] = useState<VinculoTrelloDto[]>([]);
   const [importando, setImportando] = useState(false);
   const [ampliada, setAmpliada] = useState<string | null>(null);
+  const { estaFijado, alternarFijado } = usarPanelReferencia();
 
   useEffect(() => {
     if (!idTarjeta) return;
@@ -266,6 +270,15 @@ export function ModalTarjetaTrello({ idTarjeta, alCerrar }: { idTarjeta: string 
                   Abrir en Trello
                 </Boton>
               </a>
+              <Boton
+                variante="secundario"
+                tamano="sm"
+                icono={estaFijado('TarjetaTrello', tarjeta.id) ? PinOff : Pin}
+                className="justify-start"
+                onClick={() => alternarFijado({ tipo: 'TarjetaTrello', id: tarjeta.id, titulo: tarjeta.nombre })}
+              >
+                {estaFijado('TarjetaTrello', tarjeta.id) ? 'Quitar del panel' : 'Fijar en el panel'}
+              </Boton>
               <Boton variante="fantasma" tamano="sm" icono={Copy} className="justify-start" onClick={() => void copiarEnlace()}>
                 Copiar enlace
               </Boton>

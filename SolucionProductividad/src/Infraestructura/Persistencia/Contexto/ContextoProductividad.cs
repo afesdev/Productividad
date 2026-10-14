@@ -70,6 +70,8 @@ public sealed class ContextoProductividad : DbContext, IContextoAplicacion
     public DbSet<PreferenciaUsuario> PreferenciasUsuario => Set<PreferenciaUsuario>();
     public DbSet<TicketEtiqueta> TicketsEtiquetas => Set<TicketEtiqueta>();
     public DbSet<TareaEtiqueta> TareasEtiquetas => Set<TareaEtiqueta>();
+    public DbSet<Snippet> Snippets => Set<Snippet>();
+    public DbSet<SnippetEtiqueta> SnippetsEtiquetas => Set<SnippetEtiqueta>();
 
     public Task<int> GuardarCambiosAsync(CancellationToken tokenCancelacion = default) => SaveChangesAsync(tokenCancelacion);
 
@@ -139,6 +141,9 @@ public sealed class ContextoProductividad : DbContext, IContextoAplicacion
         constructorModelo.Entity<TicketEtiqueta>().HasQueryFilter(relacion =>
             !_aplicarFiltrosUsuario || EtiquetasDocumento.Any(etiqueta => etiqueta.Id == relacion.EtiquetaId && etiqueta.UsuarioId == UsuarioIdActual));
         constructorModelo.Entity<TareaEtiqueta>().HasQueryFilter(relacion =>
+            !_aplicarFiltrosUsuario || EtiquetasDocumento.Any(etiqueta => etiqueta.Id == relacion.EtiquetaId && etiqueta.UsuarioId == UsuarioIdActual));
+        constructorModelo.Entity<Snippet>().HasQueryFilter(snippet => !_aplicarFiltrosUsuario || snippet.UsuarioId == UsuarioIdActual);
+        constructorModelo.Entity<SnippetEtiqueta>().HasQueryFilter(relacion =>
             !_aplicarFiltrosUsuario || EtiquetasDocumento.Any(etiqueta => etiqueta.Id == relacion.EtiquetaId && etiqueta.UsuarioId == UsuarioIdActual));
     }
 

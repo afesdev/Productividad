@@ -36,7 +36,9 @@ public sealed record FilaReporteDto(
     bool TableroSugerido,
     EstadoActividadReporte Estado,
     decimal? Horas,
-    DateTime? FechaReportado);
+    DateTime? FechaReportado,
+    /// <summary>Fuera del reporte (por su tipo o quitada a mano); solo llega si se piden las excluidas.</summary>
+    bool Excluida = false);
 
 public sealed record ArchivoReporteDto(string NombreArchivo, byte[] Contenido);
 
@@ -46,11 +48,22 @@ internal static class ReglasReporte
 {
     public const int MaximoDias = 93;
 
+    /// <summary>Tipos que van al reporte por defecto: lo que se hizo (eventos y tareas), no apuntes como aprendizajes o notas.</summary>
+    public static bool TipoReportable(TipoEntradaDiario tipo) => tipo is TipoEntradaDiario.Evento or TipoEntradaDiario.Tarea;
+
+    /// <summary>Filtro en SQL equivalente a <see cref="EstaIncluida"/>.</summary>
+    public static IQueryable<EntradaDiario> SoloIncluidas(IQueryable<EntradaDiario> entradas) =>
+        entradas.Where(entrada => entrada.IncluirEnReporte == true
+            || (entrada.IncluirEnReporte == null && (entrada.Tipo == TipoEntradaDiario.Evento || entrada.Tipo == TipoEntradaDiario.Tarea)));
+
+    public static bool EstaIncluida(bool? incluirEnReporte, TipoEntradaDiario tipo) => incluirEnReporte ?? TipoReportable(tipo);
+
     public static decimal? Horas(TimeOnly inicio, TimeOnly? fin) =>
         fin is { } final && final >= inicio ? Math.Round((decimal)(final - inicio).TotalHours, 2, MidpointRounding.AwayFromZero) : null;
 
-    public static EstadoActividadReporte Estado(EstadoActividadReporte? elegido, TipoEntradaDiario tipo, bool completada) =>
-        elegido ?? (tipo == TipoEntradaDiario.Tarea && !completada ? EstadoActividadReporte.EnProceso : EstadoActividadReporte.Terminada);
+    /// <summary>Siempre automático: sin hora de fin la actividad sigue en proceso; con hora de inicio y fin, terminada.</summary>
+    public static EstadoActividadReporte Estado(TimeOnly? horaFin) =>
+        horaFin is null ? EstadoActividadReporte.EnProceso : EstadoActividadReporte.Terminada;
 
     public static string Texto(EstadoActividadReporte estado) => estado == EstadoActividadReporte.Terminada ? "Terminada" : "En proceso";
 
@@ -58,7 +71,7 @@ internal static class ReglasReporte
     internal sealed record EntradaCruda(
         Guid Id, DateOnly Fecha, TimeOnly HoraInicio, TimeOnly? HoraFin, string Titulo, TipoEntradaDiario Tipo, bool Completada,
         DateOnly? FechaSolicitud, DateTime? CreacionTarea, string? ClaveTarea, Guid? ProyectoTareaId,
-        Guid? TableroReporteId, string? NombreTablero, EstadoActividadReporte? EstadoReporte, DateTime? FechaReportado);
+        Guid? TableroReporteId, string? NombreTablero, EstadoActividadReporte? EstadoReporte, DateTime? FechaReportado, bool? IncluirEnReporte);
 
     public static IQueryable<EntradaCruda> Proyectar(IQueryable<EntradaDiario> entradas) =>
         entradas.Where(entrada => entrada.HoraInicio != null).Select(entrada => new EntradaCruda(
@@ -76,7 +89,8 @@ internal static class ReglasReporte
             entrada.TableroReporteId,
             entrada.TableroReporte == null ? null : entrada.TableroReporte.Nombre,
             entrada.EstadoReporte,
-            entrada.FechaReportado));
+            entrada.FechaReportado,
+            entrada.IncluirEnReporte));
 
     /// <summary>Tablero sugerido por proyecto: el primero no archivado asociado al proyecto de la tarea vinculada.</summary>
     public static async Task<Dictionary<Guid, (Guid Id, string Nombre)>> TablerosPorProyectoAsync(IContextoAplicacion contexto, CancellationToken tokenCancelacion) =>
@@ -112,9 +126,10 @@ internal static class ReglasReporte
             entrada.TableroReporteId ?? sugerido?.Id,
             entrada.NombreTablero ?? sugerido?.Nombre,
             sugerido is not null,
-            Estado(entrada.EstadoReporte, entrada.Tipo, entrada.Completada),
+            Estado(entrada.HoraFin),
             Horas(entrada.HoraInicio, entrada.HoraFin),
-            entrada.FechaReportado);
+            entrada.FechaReportado,
+            !EstaIncluida(entrada.IncluirEnReporte, entrada.Tipo));
     }
 }
 
@@ -209,7 +224,8 @@ public sealed class ManejadorEliminarTableroReporteComando : IRequestHandler<Eli
 
 // ---------- Reporte ----------
 
-public sealed record ObtenerReporteActividadesConsulta(DateOnly Desde, DateOnly Hasta, bool SoloPendientes) : IRequest<IReadOnlyList<FilaReporteDto>>;
+/// <summary><paramref name="IncluirExcluidas"/>: también las que no van al reporte (para volver a incluirlas).</summary>
+public sealed record ObtenerReporteActividadesConsulta(DateOnly Desde, DateOnly Hasta, bool SoloPendientes, bool IncluirExcluidas = false) : IRequest<IReadOnlyList<FilaReporteDto>>;
 
 public sealed class ValidadorObtenerReporteActividadesConsulta : AbstractValidator<ObtenerReporteActividadesConsulta>
 {
@@ -232,6 +248,7 @@ public sealed class ManejadorObtenerReporteActividadesConsulta : IRequestHandler
         var entradas = _contexto.EntradasDiario.AsNoTracking()
             .Where(entrada => entrada.RegistroDiario!.FechaLog >= consulta.Desde && entrada.RegistroDiario.FechaLog <= consulta.Hasta);
         if (consulta.SoloPendientes) entradas = entradas.Where(entrada => entrada.FechaReportado == null);
+        if (!consulta.IncluirExcluidas) entradas = ReglasReporte.SoloIncluidas(entradas);
 
         var crudas = await ReglasReporte.Proyectar(entradas).ToListAsync(tokenCancelacion);
         var tablerosPorProyecto = await ReglasReporte.TablerosPorProyectoAsync(_contexto, tokenCancelacion);
@@ -244,7 +261,7 @@ public sealed class ManejadorObtenerReporteActividadesConsulta : IRequestHandler
 
 /// <summary>Edición de una fila desde la tabla del reporte; se guarda en la entrada del diario.</summary>
 public sealed record ActualizarFilaReporteComando(
-    Guid EntradaId, string Descripcion, TimeOnly HoraInicio, TimeOnly? HoraFin, Guid? TableroReporteId, DateOnly? FechaSolicitud, EstadoActividadReporte Estado)
+    Guid EntradaId, string Descripcion, TimeOnly HoraInicio, TimeOnly? HoraFin, Guid? TableroReporteId, DateOnly? FechaSolicitud)
     : IRequest<FilaReporteDto>;
 
 public sealed class ValidadorActualizarFilaReporteComando : AbstractValidator<ActualizarFilaReporteComando>
@@ -252,7 +269,6 @@ public sealed class ValidadorActualizarFilaReporteComando : AbstractValidator<Ac
     public ValidadorActualizarFilaReporteComando()
     {
         RuleFor(comando => comando.Descripcion).NotEmpty().MaximumLength(500).WithName("Descripción");
-        RuleFor(comando => comando.Estado).IsInEnum();
         RuleFor(comando => comando.HoraFin).Must((comando, fin) => fin is null || fin >= comando.HoraInicio)
             .WithMessage("La hora de fin no puede ser anterior a la de inicio.");
     }
@@ -277,9 +293,10 @@ public sealed class ManejadorActualizarFilaReporteComando : IRequestHandler<Actu
         entrada.HoraFin = comando.HoraFin;
         entrada.TableroReporteId = comando.TableroReporteId;
         entrada.FechaSolicitud = comando.FechaSolicitud;
-        entrada.EstadoReporte = comando.Estado;
+        // El estado ya no se elige: se deduce de las horas. Se limpia el que quedara guardado de antes.
+        entrada.EstadoReporte = null;
         // En el diario, las entradas de tipo Tarea reflejan el mismo estado en su casilla.
-        if (entrada.Tipo == TipoEntradaDiario.Tarea) entrada.Completada = comando.Estado == EstadoActividadReporte.Terminada;
+        if (entrada.Tipo == TipoEntradaDiario.Tarea) entrada.Completada = ReglasReporte.Estado(comando.HoraFin) == EstadoActividadReporte.Terminada;
         entrada.RegistroDiario!.FechaActualizacion = DateTime.UtcNow;
         await _contexto.GuardarCambiosAsync(tokenCancelacion);
 
@@ -353,5 +370,31 @@ public sealed class ManejadorExportarReporteExcelConsulta : IRequestHandler<Expo
         var hasta = filas.Max(fila => fila.Fecha);
         var nombre = desde == hasta ? $"Actividades {desde:yyyy-MM-dd}.xlsx" : $"Actividades {desde:yyyy-MM-dd} a {hasta:yyyy-MM-dd}.xlsx";
         return new ArchivoReporteDto(nombre, contenido);
+    }
+}
+
+// ---------- Incluir o quitar una actividad del reporte ----------
+
+/// <summary>
+/// Quita una entrada del reporte o la vuelve a incluir. Si lo elegido coincide con lo que haría su tipo, se vuelve al
+/// comportamiento por defecto (null) para que un cambio de tipo posterior siga aplicándose.
+/// </summary>
+public sealed record CambiarInclusionReporteComando(Guid EntradaId, bool Incluir) : IRequest<FilaReporteDto>;
+
+public sealed class ManejadorCambiarInclusionReporteComando : IRequestHandler<CambiarInclusionReporteComando, FilaReporteDto>
+{
+    private readonly IContextoAplicacion _contexto;
+
+    public ManejadorCambiarInclusionReporteComando(IContextoAplicacion contexto) => _contexto = contexto;
+
+    public async Task<FilaReporteDto> Handle(CambiarInclusionReporteComando comando, CancellationToken tokenCancelacion)
+    {
+        var entrada = await _contexto.EntradasDiario.FirstOrDefaultAsync(existente => existente.Id == comando.EntradaId, tokenCancelacion)
+            ?? throw new ExcepcionEntidadNoEncontrada("la actividad", comando.EntradaId);
+        entrada.IncluirEnReporte = comando.Incluir == ReglasReporte.TipoReportable(entrada.Tipo) ? null : comando.Incluir;
+        await _contexto.GuardarCambiosAsync(tokenCancelacion);
+
+        var cruda = await ReglasReporte.Proyectar(_contexto.EntradasDiario.AsNoTracking().Where(existente => existente.Id == entrada.Id)).FirstAsync(tokenCancelacion);
+        return ReglasReporte.AFila(cruda, await ReglasReporte.TablerosPorProyectoAsync(_contexto, tokenCancelacion));
     }
 }

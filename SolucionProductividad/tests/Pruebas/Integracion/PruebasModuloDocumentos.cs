@@ -83,7 +83,9 @@ public class PruebasModuloDocumentos
         using var escenario = await CrearEscenarioAsync();
         var backend = await escenario.EnviarAsync(new GuardarEtiquetaDocumentoComando(null, "#backend", "verde"));
         var devops = await escenario.EnviarAsync(new GuardarEtiquetaDocumentoComando(null, "devops", "naranja"));
-        await Assert.ThrowsAsync<ExcepcionConflicto>(() => escenario.EnviarAsync(new GuardarEtiquetaDocumentoComando(null, "backend", "rojo")));
+        // Crear una que ya existe devuelve la existente; renombrar otra con ese nombre sí es un conflicto.
+        Assert.Equal(backend, await escenario.EnviarAsync(new GuardarEtiquetaDocumentoComando(null, "backend", "rojo")));
+        await Assert.ThrowsAsync<ExcepcionConflicto>(() => escenario.EnviarAsync(new GuardarEtiquetaDocumentoComando(devops, "backend", "naranja")));
         await Assert.ThrowsAsync<ExcepcionValidacion>(() => escenario.EnviarAsync(new GuardarEtiquetaDocumentoComando(null, "otra", "#ff0000")));
 
         var documentoId = await escenario.EnviarAsync(new CrearDocumentoComando(null, null, "Despliegue", "pasos", null));

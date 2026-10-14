@@ -44,8 +44,13 @@ public class EntradaDiario : EntidadBase
     public Guid? TableroReporteId { get; set; }
     /// <summary>FECHA DE SOLICITUD. Si es null se usa la creación de la tarea vinculada o el día de la entrada.</summary>
     public DateOnly? FechaSolicitud { get; set; }
-    /// <summary>Estado elegido en el reporte. Si es null: Tarea completada = Terminada, Tarea pendiente = En proceso, resto = Terminada.</summary>
+    /// <summary>Sin uso: el estado del reporte es automático (sin hora de fin = En proceso, con hora de fin = Terminada). Se conserva la columna.</summary>
     public EstadoActividadReporte? EstadoReporte { get; set; }
+    /// <summary>
+    /// Si la entrada va al reporte de actividades. null = según el tipo (Evento y Tarea sí; Decisión, Aprendizaje,
+    /// Bloqueo y Nota no); true/false = elegido a mano en el reporte.
+    /// </summary>
+    public bool? IncluirEnReporte { get; set; }
     /// <summary>Cuándo se copió o exportó al Excel de la empresa; null = pendiente de reportar.</summary>
     public DateTime? FechaReportado { get; set; }
 

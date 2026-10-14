@@ -42,7 +42,7 @@ public class PruebasReporteActividades
         var segunda = filas[1];
         Assert.Equal(tareaPendiente, segunda.EntradaId);
         Assert.Null(segunda.Horas); // falta hora de fin
-        Assert.Equal(EstadoActividadReporte.EnProceso, segunda.Estado); // tarea no completada
+        Assert.Equal(EstadoActividadReporte.EnProceso, segunda.Estado); // sin hora de fin
         Assert.Null(segunda.TableroReporteId);
     }
 
@@ -56,7 +56,7 @@ public class PruebasReporteActividades
         var entradaId = await escenario.EnviarAsync(new CrearEntradaDiarioComando(dia, TipoEntradaDiario.Tarea, "Revisar", null, new TimeOnly(9, 0), null));
 
         var fila = await escenario.EnviarAsync(new ActualizarFilaReporteComando(
-            entradaId, "Revisión de PR del módulo de pagos", new TimeOnly(9, 0), new TimeOnly(13, 0), tableroId, new DateOnly(2026, 9, 30), EstadoActividadReporte.Terminada));
+            entradaId, "Revisión de PR del módulo de pagos", new TimeOnly(9, 0), new TimeOnly(13, 0), tableroId, new DateOnly(2026, 9, 30)));
 
         Assert.Equal(4m, fila.Horas);
         Assert.Equal("Interno", fila.NombreTablero);
@@ -68,6 +68,31 @@ public class PruebasReporteActividades
         Assert.Equal("Revisión de PR del módulo de pagos", entrada.Titulo);
         Assert.True(entrada.Completada); // Terminada en el reporte = casilla marcada en el diario
         Assert.Equal(tableroId, entrada.TableroReporteId);
+    }
+
+    [Fact]
+    public async Task El_estado_es_automatico_segun_la_hora_de_fin()
+    {
+        var usuario = await _baseDatos.CrearUsuarioAsync("Estados automáticos");
+        using var escenario = _baseDatos.CrearEscenario(usuario);
+        var dia = new DateOnly(2026, 10, 7);
+        async Task<FilaReporteDto> Fila(Guid id) => (await escenario.EnviarAsync(new ObtenerReporteActividadesConsulta(dia, dia, false))).Single(fila => fila.EntradaId == id);
+
+        // Un evento sin hora de fin queda En proceso; con inicio y fin, Terminada (también si es una tarea sin completar).
+        var abierto = await escenario.EnviarAsync(new CrearEntradaDiarioComando(dia, TipoEntradaDiario.Evento, "Soporte en curso", null, new TimeOnly(9, 0), null));
+        var cerrada = await escenario.EnviarAsync(new CrearEntradaDiarioComando(dia, TipoEntradaDiario.Tarea, "Despliegue", null, new TimeOnly(10, 0), new TimeOnly(11, 0)));
+        Assert.Equal(EstadoActividadReporte.EnProceso, (await Fila(abierto)).Estado);
+        Assert.Equal(EstadoActividadReporte.Terminada, (await Fila(cerrada)).Estado);
+
+        // Poner la hora de fin desde el reporte lo pasa a Terminada; quitarla, a En proceso.
+        var fila = await escenario.EnviarAsync(new ActualizarFilaReporteComando(abierto, "Soporte en curso", new TimeOnly(9, 0), new TimeOnly(12, 0), null, null));
+        Assert.Equal(EstadoActividadReporte.Terminada, fila.Estado);
+        fila = await escenario.EnviarAsync(new ActualizarFilaReporteComando(abierto, "Soporte en curso", new TimeOnly(9, 0), null, null, null));
+        Assert.Equal(EstadoActividadReporte.EnProceso, fila.Estado);
+
+        // Igual desde el diario.
+        await escenario.EnviarAsync(new ActualizarEntradaDiarioComando(abierto, TipoEntradaDiario.Evento, "Soporte en curso", null, new TimeOnly(9, 0), new TimeOnly(12, 30), false));
+        Assert.Equal(EstadoActividadReporte.Terminada, (await Fila(abierto)).Estado);
     }
 
     [Fact]
@@ -129,7 +154,7 @@ public class PruebasReporteActividades
 
         // Nombres únicos por usuario; con actividades imputadas no se borra.
         await Assert.ThrowsAsync<ExcepcionConflicto>(() => escenario.EnviarAsync(new GuardarTableroReporteComando(null, "Sygnus Cremil", null, false)));
-        await escenario.EnviarAsync(new ActualizarFilaReporteComando(entradaId, "Ajustar reportes", new TimeOnly(15, 0), new TimeOnly(16, 0), tableroId, null, EstadoActividadReporte.EnProceso));
+        await escenario.EnviarAsync(new ActualizarFilaReporteComando(entradaId, "Ajustar reportes", new TimeOnly(15, 0), new TimeOnly(16, 0), tableroId, null));
         await Assert.ThrowsAsync<ExcepcionConflicto>(() => escenario.EnviarAsync(new EliminarTableroReporteComando(tableroId)));
     }
 
@@ -145,5 +170,31 @@ public class PruebasReporteActividades
         Assert.Empty(await escenarioOtro.EnviarAsync(new ListarTablerosReporteConsulta()));
         await Assert.ThrowsAsync<ExcepcionEntidadNoEncontrada>(() =>
             escenarioOtro.EnviarAsync(new CrearEntradaDiarioComando(new DateOnly(2026, 10, 7), TipoEntradaDiario.Evento, "x", null, new TimeOnly(9, 0), null, TableroReporteId: tableroId)));
+    }
+
+    [Fact]
+    public async Task Solo_eventos_y_tareas_van_al_reporte_y_se_pueden_quitar_o_incluir_a_mano()
+    {
+        var usuario = await _baseDatos.CrearUsuarioAsync("Filtra reporte");
+        using var escenario = _baseDatos.CrearEscenario(usuario);
+        var dia = new DateOnly(2026, 10, 14);
+        var evento = await escenario.EnviarAsync(new CrearEntradaDiarioComando(dia, TipoEntradaDiario.Evento, "Reunión de seguimiento", null, new TimeOnly(9, 0), new TimeOnly(10, 0)));
+        var aprendizaje = await escenario.EnviarAsync(new CrearEntradaDiarioComando(dia, TipoEntradaDiario.Aprendizaje, "Cómo funciona el SLA", null, new TimeOnly(11, 0), null));
+
+        async Task<IReadOnlyList<FilaReporteDto>> Filas(bool incluirExcluidas = false) =>
+            await escenario.EnviarAsync(new ObtenerReporteActividadesConsulta(dia, dia, false, incluirExcluidas));
+
+        // El aprendizaje con hora no entra; se ve como excluido solo si se piden las excluidas.
+        Assert.Equal([evento], (await Filas()).Select(fila => fila.EntradaId));
+        Assert.True((await Filas(incluirExcluidas: true)).Single(fila => fila.EntradaId == aprendizaje).Excluida);
+
+        // Quitar el evento y meter el aprendizaje a mano.
+        Assert.True((await escenario.EnviarAsync(new CambiarInclusionReporteComando(evento, false))).Excluida);
+        Assert.False((await escenario.EnviarAsync(new CambiarInclusionReporteComando(aprendizaje, true))).Excluida);
+        Assert.Equal([aprendizaje], (await Filas()).Select(fila => fila.EntradaId));
+
+        // Volver a incluir el evento lo deja como estaba (por tipo).
+        await escenario.EnviarAsync(new CambiarInclusionReporteComando(evento, true));
+        Assert.Equal(2, (await Filas()).Count);
     }
 }

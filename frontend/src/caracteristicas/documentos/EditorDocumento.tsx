@@ -45,6 +45,7 @@ import { ModalMoverDocumento } from './ModalesOrganizacion';
 import { PanelVersiones } from './PanelVersiones';
 import { SelectorEtiquetas } from './SelectorEtiquetas';
 import { BotonConexiones } from '../grafo/ComponentesGrafo';
+import { BotonFijar } from '../referencia/PanelReferencia';
 import { paleta, portadaNeutra } from './paleta';
 
 type EstadoGuardado = 'guardado' | 'pendiente' | 'guardando' | 'error';
@@ -501,6 +502,7 @@ export function EditorDocumento({
               <History className="size-4" />
               <span className="hidden tabular-nums sm:inline">{totalVersiones}</span>
             </button>
+            <BotonFijar tipo="Documento" id={documento.id} titulo={documento.titulo} className="size-9" />
             <BotonConexiones tipo="Documento" id={documento.id} className="h-9" />
             <BotonIcono
               icono={ListTree}

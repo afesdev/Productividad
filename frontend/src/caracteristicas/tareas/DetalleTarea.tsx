@@ -14,6 +14,7 @@ import { BotonCronometro } from '../tiempo/ControlesCronometro';
 import { BotonMarcador } from '../marcadores/ContextoMarcadores';
 import { BotonConexiones } from '../grafo/ComponentesGrafo';
 import { VinculosTrello } from '../trello/VinculosTrello';
+import { BotonFijar } from '../referencia/PanelReferencia';
 import { Boton, BotonIcono, Casilla, Esqueleto, unirClases, type Icono } from '../../componentes/ui/primitivos';
 
 const estados: { valor: EstadoTarea; etiqueta: string }[] = [
@@ -229,6 +230,7 @@ export function DetalleTarea({ tareaId, modoPagina = false, alCerrar, alAbrirTar
             {guardando && <Loader2 className="size-3.5 animate-spin" aria-label="Guardando" />}
           </div>
           <div className="flex items-center gap-1">
+            {detalle && <BotonFijar tipo="Tarea" id={tareaId} titulo={`${detalle.resumen.clave} ${detalle.resumen.titulo}`} />}
             {detalle && <BotonMarcador tipo="Tarea" id={tareaId} />}
             {detalle && <BotonConexiones tipo="Tarea" id={tareaId} />}
             {detalle && <BotonCronometro tareaId={tareaId} className="mr-1" />}
@@ -252,6 +254,7 @@ export function DetalleTarea({ tareaId, modoPagina = false, alCerrar, alAbrirTar
             {guardando && <Loader2 className="size-3.5 animate-spin" aria-label="Guardando" />}
           </div>
           <div className="flex items-center gap-1">
+            {detalle && <BotonFijar tipo="Tarea" id={tareaId} titulo={`${detalle.resumen.clave} ${detalle.resumen.titulo}`} />}
             {detalle && <BotonMarcador tipo="Tarea" id={tareaId} />}
             {detalle && <BotonConexiones tipo="Tarea" id={tareaId} />}
             {detalle && <BotonCronometro tareaId={tareaId} className="mr-1" />}

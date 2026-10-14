@@ -43,6 +43,7 @@ export function SelectorEtiquetas({
   const [busqueda, setBusqueda] = useState('');
   const [indiceActivo, setIndiceActivo] = useState(0);
   const referencia = useRef<HTMLDivElement>(null);
+  const creando = useRef(false);
 
   useEffect(() => {
     if (!abierto) return;
@@ -78,15 +79,21 @@ export function SelectorEtiquetas({
   const alternar = (id: string) => void guardar(idsAsignadas.has(id) ? [...idsAsignadas].filter((actual) => actual !== id) : [...idsAsignadas, id]);
 
   async function crear() {
+    // Enter repetido o doble clic: una sola creación a la vez.
+    if (creando.current) return;
+    creando.current = true;
     const nombre = busqueda.trim().replace(/^#/, '');
     // Colores rotando por la paleta para que etiquetas nuevas se distingan sin configurarlas.
     const color = coloresPaleta[(disponibles.length + 1) % coloresPaleta.length];
     try {
+      // Si ya existía (catálogo desactualizado), la API devuelve la existente y simplemente se asigna.
       const id = await apiDocumentos.guardarEtiqueta(null, { nombre, color });
       setBusqueda('');
-      await guardar([...idsAsignadas, id], true);
+      await guardar([...new Set([...idsAsignadas, id])], true);
     } catch (errorCreacion) {
       notificar.error('No se pudo crear la etiqueta', errorCreacion);
+    } finally {
+      creando.current = false;
     }
   }
 

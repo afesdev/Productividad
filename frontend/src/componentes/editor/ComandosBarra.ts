@@ -2,6 +2,7 @@ import { Extension, type Editor, type Range } from '@tiptap/core';
 import Suggestion from '@tiptap/suggestion';
 import { PluginKey } from '@tiptap/pm/state';
 import {
+  Braces,
   CheckSquare,
   ChevronsDownUp,
   Code2,
@@ -24,6 +25,7 @@ import {
 } from 'lucide-react';
 import { configuracionBloque, tiposBloqueVivo, type TipoBloqueVivo } from '../bloquesVivos/formato';
 import { solicitarBloqueVivo } from '../bloquesVivos/ModalBloqueVivo';
+import { solicitarSnippet } from '../../caracteristicas/snippets/SelectorSnippets';
 import type { ElementoSugerencia } from './ListaSugerencias';
 import { crearRenderizadorSugerencias } from './renderizadorSugerencias';
 
@@ -53,7 +55,7 @@ function crearComandos(opciones: OpcionesComandosBarra): Comando[] {
       ejecutar: (editor, rango) => editor.chain().focus().deleteRange(rango).toggleOrderedList().run() },
     { id: 'tareas', titulo: 'Lista de tareas', descripcion: 'Casillas para marcar', icono: CheckSquare, grupo: 'Listas', palabrasClave: ['tareas', 'check', 'todo', 'pendientes'],
       ejecutar: (editor, rango) => editor.chain().focus().deleteRange(rango).toggleTaskList().run() },
-    { id: 'codigo', titulo: 'Bloque de código', descripcion: 'Con resaltado de sintaxis', icono: Code2, grupo: 'Bloques', palabrasClave: ['codigo', 'code', 'snippet'],
+    { id: 'codigo', titulo: 'Bloque de código', descripcion: 'Con resaltado de sintaxis', icono: Code2, grupo: 'Bloques', palabrasClave: ['codigo', 'code', 'bloque'],
       ejecutar: (editor, rango) => editor.chain().focus().deleteRange(rango).toggleCodeBlock().run() },
     { id: 'cita', titulo: 'Cita', descripcion: 'Texto destacado', icono: Quote, grupo: 'Bloques', palabrasClave: ['cita', 'quote', 'nota'],
       ejecutar: (editor, rango) => editor.chain().focus().deleteRange(rango).toggleBlockquote().run() },
@@ -90,6 +92,20 @@ function crearComandos(opciones: OpcionesComandosBarra): Comando[] {
       } },
     { id: 'enlace', titulo: 'Enlazar página o tarea', descripcion: 'Escribe [[ y busca', icono: Link2, grupo: 'Insertar', palabrasClave: ['enlace', 'wikilink', 'link', 'referencia'],
       ejecutar: (editor, rango) => editor.chain().focus().deleteRange(rango).insertContent('[[').run() },
+    { id: 'snippet', titulo: 'Snippet de la biblioteca', descripcion: 'Consulta o comando guardado, con sus variables', icono: Braces, grupo: 'Insertar',
+      palabrasClave: ['snippet', 'biblioteca', 'consulta', 'sql', 'comando', 'fragmento'],
+      ejecutar: (editor, rango) => {
+        editor.chain().focus().deleteRange(rango).run();
+        const posicion = editor.state.selection.from;
+        void solicitarSnippet().then((snippet) => {
+          if (!snippet || editor.isDestroyed) return;
+          editor
+            .chain()
+            .focus(posicion)
+            .insertContent({ type: 'codeBlock', attrs: { language: snippet.lenguaje }, content: [{ type: 'text', text: snippet.contenido }] })
+            .run();
+        });
+      } },
     ...tiposBloqueVivo.map((tipo) => comandoBloqueVivo(tipo)),
   ];
 }

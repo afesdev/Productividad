@@ -1,5 +1,6 @@
 import { clienteApi } from './clienteApi';
 import type {
+  SnippetDto,
   EstadoConexionTrelloDto,
   VinculoTrelloDto,
   TableroTrelloDto,
@@ -220,8 +221,13 @@ export const apiReporte = {
     datos(clienteApi.put<string>(`/reporte/tableros/${id}`, tablero)),
   eliminarTablero: (id: string) => clienteApi.delete(`/reporte/tableros/${id}`),
   /** Entradas del diario con hora en [desde, hasta] (AAAA-MM-DD, máx. 93 días). */
-  actividades: (desde: string, hasta: string, soloPendientes: boolean) =>
-    datos(clienteApi.get<FilaReporteDto[]>('/reporte/actividades', { params: { desde, hasta, soloPendientes } })).then((filas) => filas.map(normalizarFila)),
+  actividades: (desde: string, hasta: string, soloPendientes: boolean, incluirExcluidas = false) =>
+    datos(clienteApi.get<FilaReporteDto[]>('/reporte/actividades', { params: { desde, hasta, soloPendientes, incluirExcluidas } })).then((filas) =>
+      filas.map(normalizarFila),
+    ),
+  /** Quita una actividad del reporte o la vuelve a incluir (por defecto solo van Eventos y Tareas). */
+  cambiarInclusion: (entradaId: string, incluir: boolean) =>
+    datos(clienteApi.put<FilaReporteDto>(`/reporte/actividades/${entradaId}/inclusion`, { incluir })).then(normalizarFila),
   actualizarActividad: (entradaId: string, fila: DatosFilaReporte) =>
     datos(clienteApi.put<FilaReporteDto>(`/reporte/actividades/${entradaId}`, fila)).then(normalizarFila),
   marcarReportadas: (entradaIds: string[], reportadas = true) => datos(clienteApi.post<number>('/reporte/actividades/reportadas', { entradaIds, reportadas })),
@@ -270,6 +276,26 @@ export const apiCalendario = {
   /** `actualizar` ignora la caché del backend (unos minutos) y vuelve a descargar el calendario de Outlook. */
   eventos: (desde: string, hasta: string, actualizar = false, senal?: AbortSignal) =>
     datos(clienteApi.get<EventoCalendarioDto[]>('/calendario/eventos', { params: { desde, hasta, actualizar }, signal: senal })),
+};
+
+export interface DatosSnippet {
+  titulo: string;
+  lenguaje: string;
+  contenido: string;
+  descripcion: string | null;
+  etiquetaIds: string[];
+}
+
+export const apiSnippets = {
+  listar: (filtros: { texto?: string; lenguaje?: string; etiquetaId?: string; soloFavoritos?: boolean } = {}, senal?: AbortSignal) =>
+    datos(clienteApi.get<SnippetDto[]>('/snippets', { params: filtros, signal: senal })),
+  obtener: (id: string) => datos(clienteApi.get<SnippetDto>(`/snippets/${id}`)),
+  crear: (snippet: DatosSnippet) => datos(clienteApi.post<SnippetDto>('/snippets', snippet)),
+  actualizar: (id: string, snippet: DatosSnippet) => datos(clienteApi.put<SnippetDto>(`/snippets/${id}`, snippet)),
+  eliminar: (id: string) => clienteApi.delete(`/snippets/${id}`),
+  alternarFavorito: (id: string) => datos(clienteApi.post<boolean>(`/snippets/${id}/favorito`)),
+  /** Al copiar o insertar: ordena por más usados. Si falla no importa. */
+  registrarUso: (id: string) => clienteApi.post(`/snippets/${id}/uso`).catch(() => undefined),
 };
 
 export const apiTrello = {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { CalendarDays, CalendarRange, ChevronLeft, ChevronRight, Columns3, Download, FileSpreadsheet, Layers, Loader2, NotebookPen, Search, X } from 'lucide-react';
+import { CalendarDays, CalendarRange, ChevronLeft, ChevronRight, Columns3, Download, FileSpreadsheet, Layers, Loader2, NotebookPen, Search, Sunset, X } from 'lucide-react';
 import { apiDiario } from '../servicios/api';
 import { notificar } from '../servicios/notificaciones';
 import type { DiaDiarioDto, EntradaExploradaDto, ResumenDiaDiarioDto, TipoEntradaDiario } from '../servicios/tipos';
@@ -287,6 +287,14 @@ function VistaDia({ fecha, alNavegar, alCambiar, capturar }: { fecha: string; al
           <h1 className="text-2xl font-semibold tracking-tight">{formatearFechaLarga(fecha)}</h1>
         </div>
         <span className="flex items-center gap-1">
+          <Link
+            to={fecha === hoyIso() ? '/cierre' : `/cierre?fecha=${fecha}`}
+            title="Cierre del día: huecos, pendientes y entregar el reporte"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm text-texto-2 transition-colors hover:bg-superficie-2 hover:text-texto"
+          >
+            <Sunset className="size-4" />
+            <span className="hidden sm:inline">Cerrar el día</span>
+          </Link>
           {dia?.registroId && <BotonMarcador tipo="RegistroDiario" id={dia.registroId} />}
           {dia?.registroId && (
             <BotonIcono

@@ -34,6 +34,7 @@ import { Avatar } from '../componentes/ui/Avatar';
 import { Modal } from '../componentes/ui/Modal';
 import { Boton, BotonIcono, Campo, Entrada, Esqueleto, Insignia, MensajeError, Selector, unirClases, type Icono } from '../componentes/ui/primitivos';
 import { VinculosTrello } from '../caracteristicas/trello/VinculosTrello';
+import { BotonFijar } from '../caracteristicas/referencia/PanelReferencia';
 
 type Pestana = 'resumen' | 'codigo' | 'despliegues' | 'conversacion' | 'historial';
 
@@ -115,6 +116,7 @@ export function PaginaDetalleTicket() {
             </h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <BotonFijar tipo="Ticket" id={detalle.resumen.id} titulo={`${detalle.resumen.clave} ${detalle.resumen.asunto}`} />
             <BotonMarcador tipo="Ticket" id={detalle.resumen.id} />
             <BotonConexiones tipo="Ticket" id={detalle.resumen.id} />
             <BotonCronometro ticketId={detalle.resumen.id} />

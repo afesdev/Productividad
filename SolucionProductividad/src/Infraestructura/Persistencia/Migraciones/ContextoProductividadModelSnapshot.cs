@@ -643,6 +643,10 @@ namespace SolucionProductividad.Persistencia.Migraciones
                         .HasColumnType("time(0)")
                         .HasColumnName("EndHoraInicio");
 
+                    b.Property<bool?>("IncluirEnReporte")
+                        .HasColumnType("bit")
+                        .HasColumnName("EndIncluirEnReporte");
+
                     b.Property<Guid>("RegistroDiarioId")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("EndRegistroDiarioId");
@@ -1652,6 +1656,98 @@ namespace SolucionProductividad.Persistencia.Migraciones
                     b.ToTable("BovedaSecretos");
                 });
 
+            modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.Snippet", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("SnpId")
+                        .HasDefaultValueSql("NEWID()");
+
+                    b.Property<string>("Contenido")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("SnpContenido");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("SnpDescripcion");
+
+                    b.Property<bool>("EsFavorito")
+                        .HasColumnType("bit")
+                        .HasColumnName("SnpEsFavorito");
+
+                    b.Property<DateTime>("FechaActualizacion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("SnpFechaActualizacion")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("SnpFechaCreacion")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<DateTime?>("FechaUltimoUso")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("SnpFechaUltimoUso");
+
+                    b.Property<string>("Lenguaje")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("SnpLenguaje");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("SnpTitulo");
+
+                    b.Property<int>("Usos")
+                        .HasColumnType("int")
+                        .HasColumnName("SnpUsos");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("SnpUsuarioId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId", "Titulo");
+
+                    b.ToTable("Snippets");
+                });
+
+            modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.SnippetEtiqueta", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("SpeId")
+                        .HasDefaultValueSql("NEWID()");
+
+                    b.Property<Guid>("EtiquetaId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("SpeEtiquetaId");
+
+                    b.Property<Guid>("SnippetId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("SpeSnippetId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EtiquetaId");
+
+                    b.HasIndex("SnippetId", "EtiquetaId")
+                        .IsUnique();
+
+                    b.ToTable("SnippetsEtiquetas");
+                });
+
             modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.TableroReporte", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2646,6 +2742,32 @@ namespace SolucionProductividad.Persistencia.Migraciones
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.Snippet", b =>
+                {
+                    b.HasOne("SolucionProductividad.Dominio.Entidades.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.SnippetEtiqueta", b =>
+                {
+                    b.HasOne("SolucionProductividad.Dominio.Entidades.EtiquetaDocumento", "Etiqueta")
+                        .WithMany()
+                        .HasForeignKey("EtiquetaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SolucionProductividad.Dominio.Entidades.Snippet", null)
+                        .WithMany("Etiquetas")
+                        .HasForeignKey("SnippetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Etiqueta");
+                });
+
             modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.TableroReporte", b =>
                 {
                     b.HasOne("SolucionProductividad.Dominio.Entidades.Proyecto", "Proyecto")
@@ -2849,6 +2971,11 @@ namespace SolucionProductividad.Persistencia.Migraciones
             modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.RegistroDiario", b =>
                 {
                     b.Navigation("Entradas");
+                });
+
+            modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.Snippet", b =>
+                {
+                    b.Navigation("Etiquetas");
                 });
 
             modelBuilder.Entity("SolucionProductividad.Dominio.Entidades.Tarea", b =>

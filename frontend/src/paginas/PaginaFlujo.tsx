@@ -9,6 +9,7 @@ import type { FlujoDetalleDto } from '../servicios/tipos';
 import { unirClases } from '../componentes/ui/primitivos';
 import { EditorFlujo, type EstadoGuardadoFlujo } from '../caracteristicas/flujos/EditorFlujo';
 import { BotonConexiones } from '../caracteristicas/grafo/ComponentesGrafo';
+import { BotonFijar } from '../caracteristicas/referencia/PanelReferencia';
 import { invalidarSistemas, usarSistemas } from '../componentes/bloquesVivos/sistemas';
 
 const textoEstado: Record<EstadoGuardadoFlujo, string> = {
@@ -124,6 +125,7 @@ export function PaginaFlujo() {
             <option key={opcion} value={opcion} />
           ))}
         </datalist>
+        {flujo && <BotonFijar tipo="Flujo" id={flujo.id} titulo={flujo.titulo} />}
         {flujo && <BotonConexiones tipo="Flujo" id={flujo.id} />}
         <span className={unirClases('flex w-28 shrink-0 items-center justify-end gap-1.5 text-xs', estado === 'error' ? 'text-peligro' : 'text-texto-3')} aria-live="polite">
           {IconoEstado ? <IconoEstado className={unirClases('size-3.5', estado === 'guardando' && 'animate-spin')} /> : <span className="size-1.5 rounded-full bg-aviso" />}

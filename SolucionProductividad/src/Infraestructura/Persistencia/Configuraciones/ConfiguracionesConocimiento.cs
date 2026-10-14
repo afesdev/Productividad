@@ -152,6 +152,32 @@ public sealed class ConfiguracionVinculoTrello : IEntityTypeConfiguration<Vincul
     }
 }
 
+public sealed class ConfiguracionSnippet : IEntityTypeConfiguration<Snippet>
+{
+    public void Configure(EntityTypeBuilder<Snippet> entidad)
+    {
+        entidad.HasKey(snippet => snippet.Id);
+        entidad.Property(snippet => snippet.Titulo).HasMaxLength(200).IsRequired();
+        entidad.Property(snippet => snippet.Lenguaje).HasMaxLength(30).IsUnicode(false).IsRequired();
+        entidad.Property(snippet => snippet.Contenido).IsRequired();
+        entidad.Property(snippet => snippet.Descripcion).HasMaxLength(1000);
+        entidad.HasIndex(snippet => new { snippet.UsuarioId, snippet.Titulo });
+        entidad.HasOne<Usuario>().WithMany().HasForeignKey(snippet => snippet.UsuarioId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public sealed class ConfiguracionSnippetEtiqueta : IEntityTypeConfiguration<SnippetEtiqueta>
+{
+    public void Configure(EntityTypeBuilder<SnippetEtiqueta> entidad)
+    {
+        entidad.HasKey(relacion => relacion.Id);
+        entidad.HasIndex(relacion => new { relacion.SnippetId, relacion.EtiquetaId }).IsUnique();
+        entidad.HasIndex(relacion => relacion.EtiquetaId);
+        entidad.HasOne<Snippet>().WithMany(snippet => snippet.Etiquetas).HasForeignKey(relacion => relacion.SnippetId).OnDelete(DeleteBehavior.Cascade);
+        entidad.HasOne(relacion => relacion.Etiqueta).WithMany().HasForeignKey(relacion => relacion.EtiquetaId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 public sealed class ConfiguracionArchivoAdjunto : IEntityTypeConfiguration<ArchivoAdjunto>
 {
     public void Configure(EntityTypeBuilder<ArchivoAdjunto> entidad)

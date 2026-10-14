@@ -770,6 +770,8 @@ export interface FilaReporteDto {
   estado: EstadoActividadReporte;
   horas: number | null;
   fechaReportado: string | null;
+  /** Fuera del reporte (por su tipo o quitada a mano); solo llega si se piden las excluidas. */
+  excluida: boolean;
 }
 
 export interface DatosFilaReporte {
@@ -778,7 +780,6 @@ export interface DatosFilaReporte {
   horaFin: string | null;
   tableroReporteId: string | null;
   fechaSolicitud: string | null;
-  estado: EstadoActividadReporte;
 }
 
 // ---------- Flujos (diagramas de procesos) ----------
@@ -962,4 +963,20 @@ export interface VinculoTrelloDto {
   claveDestino: string | null;
   tituloDestino: string | null;
   fechaVinculo: string;
+}
+
+// ---------- Snippets ----------
+
+export interface SnippetDto {
+  id: string;
+  titulo: string;
+  /** Lenguaje de highlight.js ("sql", "powershell"…) o "texto". */
+  lenguaje: string;
+  contenido: string;
+  descripcion: string | null;
+  esFavorito: boolean;
+  usos: number;
+  fechaUltimoUso: string | null;
+  fechaActualizacion: string;
+  etiquetas: EtiquetaDto[];
 }

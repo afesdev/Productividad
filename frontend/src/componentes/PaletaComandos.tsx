@@ -18,10 +18,17 @@ import {
   SquareKanban,
   Workflow,
   Waypoints,
+  Columns3,
+  Sunset,
+  Braces,
+  Pin,
+  NotebookPen,
 } from 'lucide-react';
-import { apiBusqueda } from '../servicios/api';
-import type { ResultadoBusquedaDto, TipoEntidad } from '../servicios/tipos';
+import { apiBusqueda, apiSnippets } from '../servicios/api';
+import type { ResultadoBusquedaDto, SnippetDto, TipoEntidad } from '../servicios/tipos';
+import { etiquetaLenguaje } from '../caracteristicas/snippets/utilidadesSnippets';
 import { unirClases, type Icono } from './ui/primitivos';
+import { usarPanelReferencia } from '../caracteristicas/referencia/ContextoPanelReferencia';
 
 interface ElementoPaleta {
   id: string;
@@ -32,6 +39,10 @@ interface ElementoPaleta {
   /** null = entidad sin vista disponible todavía (se muestra deshabilitada). */
   ruta: string | null;
 }
+
+const RutaPanelFijados = '#panel-fijados';
+const RutaPanelNotas = '#panel-notas';
+const RutaPanelSnippets = '#panel-snippets';
 
 const accionesRapidas: ElementoPaleta[] = [
   { id: 'nuevo-ticket', grupo: 'Acciones', titulo: 'Nuevo ticket', icono: Plus, ruta: '/tickets/nuevo' },
@@ -46,6 +57,13 @@ const accionesRapidas: ElementoPaleta[] = [
   { id: 'ir-boveda', grupo: 'Ir a', titulo: 'Bóveda de secretos', icono: KeyRound, ruta: '/boveda' },
   { id: 'ir-flujos', grupo: 'Ir a', titulo: 'Flujos', icono: Workflow, ruta: '/flujos' },
   { id: 'ir-grafo', grupo: 'Ir a', titulo: 'Grafo de conocimiento', icono: Waypoints, ruta: '/grafo' },
+  { id: 'ir-trello', grupo: 'Ir a', titulo: 'Trello', icono: Columns3, ruta: '/trello' },
+  { id: 'ir-snippets', grupo: 'Ir a', titulo: 'Snippets', icono: Braces, ruta: '/snippets' },
+  { id: 'nuevo-snippet', grupo: 'Acciones', titulo: 'Panel de referencia: snippets', detalle: 'Ctrl+.', icono: Braces, ruta: RutaPanelSnippets },
+  { id: 'cierre-dia', grupo: 'Acciones', titulo: 'Cierre del día', detalle: 'Revisar huecos y entregar el reporte', icono: Sunset, ruta: '/cierre' },
+  // Rutas especiales "#…": abren el panel de referencia sin navegar.
+  { id: 'panel-fijados', grupo: 'Acciones', titulo: 'Panel de referencia: fijados', detalle: 'Ctrl+.', icono: Pin, ruta: RutaPanelFijados },
+  { id: 'panel-notas', grupo: 'Acciones', titulo: 'Notas rápidas', detalle: 'Ctrl+.', icono: NotebookPen, ruta: RutaPanelNotas },
 ];
 
 const configuracionTipo: Record<TipoEntidad, { grupo: string; icono: Icono }> = {
@@ -77,9 +95,11 @@ function rutaDe(resultado: ResultadoBusquedaDto): string | null {
  */
 export function PaletaComandos() {
   const navegar = useNavigate();
+  const panelReferencia = usarPanelReferencia();
   const [abierta, setAbierta] = useState(false);
   const [termino, setTermino] = useState('');
   const [resultados, setResultados] = useState<ResultadoBusquedaDto[]>([]);
+  const [snippets, setSnippets] = useState<SnippetDto[]>([]);
   const [buscando, setBuscando] = useState(false);
   const [indiceActivo, setIndiceActivo] = useState(0);
   const referenciaEntrada = useRef<HTMLInputElement>(null);
@@ -113,16 +133,18 @@ export function PaletaComandos() {
     const terminoLimpio = termino.trim();
     if (!abierta || terminoLimpio.length < 2) {
       setResultados([]);
+      setSnippets([]);
       setBuscando(false);
       return;
     }
     const controlador = new AbortController();
     setBuscando(true);
     const temporizador = window.setTimeout(() => {
-      apiBusqueda
-        .buscar(terminoLimpio, controlador.signal)
-        .then((encontrados) => {
+      // Los snippets tienen su propia búsqueda (no forman parte del índice de referencias); si falla, no estorba.
+      Promise.all([apiBusqueda.buscar(terminoLimpio, controlador.signal), apiSnippets.listar({ texto: terminoLimpio }, controlador.signal).catch(() => [] as SnippetDto[])])
+        .then(([encontrados, snippetsEncontrados]) => {
           setResultados(encontrados);
+          setSnippets(snippetsEncontrados.slice(0, 6));
           setIndiceActivo(0);
         })
         .catch(() => undefined)
@@ -147,12 +169,24 @@ export function PaletaComandos() {
       detalle: resultado.tipo === 'Flujo' ? (resultado.subtitulo ?? 'Flujo') : resultado.referencia,
       ruta: rutaDe(resultado),
     }));
-    return [...encontrados, ...acciones];
-  }, [resultados, termino]);
+    const deSnippets = snippets.map<ElementoPaleta>((snippet) => ({
+      id: `snippet-${snippet.id}`,
+      grupo: 'Snippets',
+      icono: Braces,
+      titulo: snippet.titulo,
+      detalle: etiquetaLenguaje(snippet.lenguaje),
+      ruta: `/snippets?snippet=${snippet.id}`,
+    }));
+    return [...encontrados, ...deSnippets, ...acciones];
+  }, [resultados, snippets, termino]);
 
   function ejecutar(elemento: ElementoPaleta | undefined) {
     if (!elemento?.ruta) return;
     setAbierta(false);
+    if (elemento.ruta === RutaPanelFijados || elemento.ruta === RutaPanelNotas || elemento.ruta === RutaPanelSnippets) {
+      panelReferencia.abrir(elemento.ruta === RutaPanelNotas ? 'notas' : elemento.ruta === RutaPanelSnippets ? 'snippets' : 'fijados');
+      return;
+    }
     navegar(elemento.ruta);
   }
 

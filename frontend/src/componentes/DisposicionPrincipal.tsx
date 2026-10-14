@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   Waypoints,
   Columns3,
+  Sunset,
+  Braces,
   House,
   Workflow,
   CalendarDays,
@@ -33,6 +35,8 @@ import {
 import { usarSesion } from '../caracteristicas/autenticacion/ContextoSesion';
 import { ProveedorCronometro } from '../caracteristicas/tiempo/ContextoCronometro';
 import { ProveedorMarcadores, usarMarcadores } from '../caracteristicas/marcadores/ContextoMarcadores';
+import { ProveedorPanelReferencia, usarPanelReferencia } from '../caracteristicas/referencia/ContextoPanelReferencia';
+import { PanelReferencia } from '../caracteristicas/referencia/PanelReferencia';
 import { iconosEntidad } from './editor/usarWikiLinks';
 import { rutaDeEntidad } from '../servicios/rutas';
 import { cambiarTema, usarTema, type Tema } from '../servicios/tema';
@@ -79,6 +83,7 @@ const secciones: { titulo: string; enlaces: EnlaceNavegacion[] }[] = [
       { ruta: '/tickets', etiqueta: 'Tickets', icono: LifeBuoy, tono: tonos.rosa },
       { ruta: '/trello', etiqueta: 'Trello', icono: Columns3, tono: tonos.cielo },
       { ruta: '/tiempo', etiqueta: 'Tiempo', icono: Timer, tono: tonos.indigo },
+      { ruta: '/cierre', etiqueta: 'Cierre del día', icono: Sunset, tono: tonos.melocoton },
       { ruta: '/reporte', etiqueta: 'Reporte', icono: FileSpreadsheet, tono: tonos.esmeralda },
     ],
   },
@@ -90,6 +95,7 @@ const secciones: { titulo: string; enlaces: EnlaceNavegacion[] }[] = [
       { ruta: '/lienzos', etiqueta: 'Lienzos', icono: PenTool, tono: tonos.melocoton },
       { ruta: '/flujos', etiqueta: 'Flujos', icono: Workflow, tono: tonos.violeta },
       { ruta: '/grafo', etiqueta: 'Grafo', icono: Waypoints, tono: tonos.cielo },
+      { ruta: '/snippets', etiqueta: 'Snippets', icono: Braces, tono: tonos.indigo },
       { ruta: '/boveda', etiqueta: 'Bóveda', icono: KeyRound, tono: tonos.turquesa },
     ],
   },
@@ -157,6 +163,7 @@ export function DisposicionPrincipal() {
   return (
     <ProveedorCronometro>
       <ProveedorMarcadores>
+        <ProveedorPanelReferencia>
         <div className="flex min-h-screen bg-fondo">
           {/* Escritorio: sidebar fijo que se pliega a solo iconos */}
           {/* El contenedor fija el menú; el botón de plegar va fuera del aside (overflow-hidden) para flotar sobre el borde. */}
@@ -196,7 +203,7 @@ export function DisposicionPrincipal() {
             )}
           </AnimatePresence>
 
-          <div className="flex min-w-0 flex-1 flex-col overflow-x-clip">
+          <ColumnaContenido>
             <BarraSuperior alAbrirMenuMovil={() => setMenuMovilAbierto(true)} />
             {pantallaCompleta ? (
               <main className="flex min-w-0 flex-1 flex-col">
@@ -209,10 +216,12 @@ export function DisposicionPrincipal() {
                 </div>
               </main>
             )}
-          </div>
+          </ColumnaContenido>
 
           <PaletaComandos />
+          <PanelReferencia />
         </div>
+        </ProveedorPanelReferencia>
       </ProveedorMarcadores>
     </ProveedorCronometro>
   );
@@ -388,6 +397,12 @@ function SelectorTema({ plegado }: { plegado: boolean }) {
       ))}
     </div>
   );
+}
+
+/** Columna de contenido: con el panel de referencia abierto deja su hueco a la derecha (en pantallas anchas lo empuja, no lo tapa). */
+function ColumnaContenido({ children }: { children: ReactNode }) {
+  const { abierto } = usarPanelReferencia();
+  return <div className={unirClases('flex min-w-0 flex-1 flex-col overflow-x-clip transition-[padding]', abierto && 'xl:pr-[22rem]')}>{children}</div>;
 }
 
 function BarraSuperior({ alAbrirMenuMovil }: { alAbrirMenuMovil: () => void }) {

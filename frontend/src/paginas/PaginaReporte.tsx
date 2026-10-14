@@ -4,6 +4,8 @@ import {
   AlertTriangle,
   CalendarPlus,
   CheckCheck,
+  Eye,
+  EyeOff,
   ChevronLeft,
   ChevronRight,
   ClipboardCopy,
@@ -21,7 +23,7 @@ import type { DatosFilaReporte, EventoCalendarioDto, FilaReporteDto } from '../s
 import { Boton, BotonIcono, EncabezadoPagina, EstadoVacio, Esqueleto, Insignia, unirClases } from '../componentes/ui/primitivos';
 import { usarConfirmacion } from '../componentes/ui/DialogoConfirmacion';
 import { usarSesion } from '../caracteristicas/autenticacion/ContextoSesion';
-import { aIso, hoyIso, normalizarHora } from '../caracteristicas/diario/presentacionDiario';
+import { aIso, configuracionTipo, hoyIso, normalizarHora } from '../caracteristicas/diario/presentacionDiario';
 import { fechaLocal } from '../caracteristicas/calendario/utilidadesCalendario';
 import { ModalConfiguracionReporte } from '../caracteristicas/reporte/ModalConfiguracionReporte';
 import { leerUltimoTablero, SelectorTablero, usarTablerosReporte } from '../caracteristicas/reporte/tablerosReporte';
@@ -89,6 +91,7 @@ export function PaginaReporte() {
   const [rangoLibre, setRangoLibre] = useState({ desde: desdeUrl ?? hoyIso(), hasta: hastaUrl ?? desdeUrl ?? hoyIso() });
   // Si se llega desde el diario ("Reportar este día") se muestra todo el día, también lo ya reportado.
   const [soloPendientes, setSoloPendientes] = useState(!desdeUrl);
+  const [mostrarExcluidas, setMostrarExcluidas] = useState(false);
   const [ejecutor, setEjecutor] = useState(() => leerLocal(ClaveEjecutor) ?? '');
   const [configurando, setConfigurando] = useState(parametros.get('configurar') === '1');
 
@@ -104,15 +107,15 @@ export function PaginaReporte() {
 
   const cargar = useCallback(async () => {
     try {
-      const resultado = await apiReporte.actividades(desde, hasta, soloPendientes);
+      const resultado = await apiReporte.actividades(desde, hasta, soloPendientes, mostrarExcluidas);
       setFilas(resultado);
-      // Por defecto se seleccionan las pendientes de reportar.
-      setSeleccion(new Set(resultado.filter((fila) => !fila.fechaReportado).map((fila) => fila.entradaId)));
+      // Por defecto se seleccionan las pendientes de reportar (nunca las excluidas).
+      setSeleccion(new Set(resultado.filter((fila) => !fila.fechaReportado && !fila.excluida).map((fila) => fila.entradaId)));
     } catch (error) {
       notificar.error('No se pudo cargar el reporte', error);
       setFilas([]);
     }
-  }, [desde, hasta, soloPendientes]);
+  }, [desde, hasta, soloPendientes, mostrarExcluidas]);
 
   useEffect(() => {
     setFilas(null);
@@ -165,9 +168,11 @@ export function PaginaReporte() {
     return [...fechas].sort();
   }, [filas, sugeridasPorDia]);
 
-  const seleccionadas = useMemo(() => (filas ?? []).filter((fila) => seleccion.has(fila.entradaId)), [filas, seleccion]);
-  const totalHoras = (filas ?? []).reduce((total, fila) => total + (fila.horas ?? 0), 0);
-  const conAvisos = (filas ?? []).filter((fila) => avisosFila(fila).length > 0).length;
+  // Las excluidas solo se muestran para poder volver a incluirlas: no cuentan en totales ni se seleccionan.
+  const reportables = useMemo(() => (filas ?? []).filter((fila) => !fila.excluida), [filas]);
+  const seleccionadas = useMemo(() => reportables.filter((fila) => seleccion.has(fila.entradaId)), [reportables, seleccion]);
+  const totalHoras = reportables.reduce((total, fila) => total + (fila.horas ?? 0), 0);
+  const conAvisos = reportables.filter((fila) => avisosFila(fila).length > 0).length;
 
   function cambiarPeriodo(nuevo: Periodo) {
     if (nuevo === 'rango') setRangoLibre({ desde, hasta });
@@ -182,6 +187,27 @@ export function PaginaReporte() {
 
   function reemplazarFila(nueva: FilaReporteDto) {
     setFilas((actuales) => actuales?.map((fila) => (fila.entradaId === nueva.entradaId ? nueva : fila)) ?? null);
+  }
+
+  async function cambiarInclusion(fila: FilaReporteDto, incluir: boolean) {
+    try {
+      const nueva = await apiReporte.cambiarInclusion(fila.entradaId, incluir);
+      setFilas((actuales) =>
+        nueva.excluida && !mostrarExcluidas
+          ? (actuales?.filter((otra) => otra.entradaId !== nueva.entradaId) ?? null)
+          : (actuales?.map((otra) => (otra.entradaId === nueva.entradaId ? nueva : otra)) ?? null),
+      );
+      setSeleccion((actual) => {
+        const siguiente = new Set(actual);
+        if (nueva.excluida) siguiente.delete(nueva.entradaId);
+        else if (!nueva.fechaReportado) siguiente.add(nueva.entradaId);
+        return siguiente;
+      });
+      if (nueva.excluida) notificar.info('Quitada del reporte', 'Sigue en el diario. Activa "Mostrar excluidas" para volver a incluirla.');
+      else notificar.exito('Incluida en el reporte', fila.descripcionTexto);
+    } catch (error) {
+      notificar.error('No se pudo cambiar', error);
+    }
   }
 
   function alternar(id: string) {
@@ -294,7 +320,7 @@ export function PaginaReporte() {
     });
   }
 
-  const todasSeleccionadas = (filas?.length ?? 0) > 0 && seleccion.size === filas?.length;
+  const todasSeleccionadas = reportables.length > 0 && reportables.every((fila) => seleccion.has(fila.entradaId));
 
   return (
     <div className="flex flex-col gap-5">
@@ -362,6 +388,13 @@ export function PaginaReporte() {
         <label className="ml-auto inline-flex cursor-pointer items-center gap-2 text-sm text-texto-2">
           <input type="checkbox" checked={soloPendientes} onChange={(evento) => setSoloPendientes(evento.target.checked)} className="size-4 accent-violet-600" />
           Solo pendientes de reportar
+        </label>
+        <label
+          className="inline-flex cursor-pointer items-center gap-2 text-sm text-texto-2"
+          title="Aprendizajes, decisiones, bloqueos y notas no van al reporte, ni lo que quitaste a mano. Muéstralos para volver a incluirlos."
+        >
+          <input type="checkbox" checked={mostrarExcluidas} onChange={(evento) => setMostrarExcluidas(evento.target.checked)} className="size-4 accent-violet-600" />
+          Mostrar excluidas
         </label>
       </div>
 
@@ -437,7 +470,7 @@ export function PaginaReporte() {
                     type="checkbox"
                     aria-label="Seleccionar todas"
                     checked={todasSeleccionadas}
-                    onChange={() => setSeleccion(todasSeleccionadas ? new Set() : new Set(filas.map((fila) => fila.entradaId)))}
+                    onChange={() => setSeleccion(todasSeleccionadas ? new Set() : new Set(reportables.map((fila) => fila.entradaId)))}
                     className="size-4 accent-violet-600"
                   />
                 </th>
@@ -453,7 +486,7 @@ export function PaginaReporte() {
             {dias.map((dia) => {
               const delDia = (filas ?? []).filter((fila) => fila.fecha === dia);
               const sugeridas = sugeridasPorDia.get(dia) ?? [];
-              const horasDia = delDia.reduce((total, fila) => total + (fila.horas ?? 0), 0);
+              const horasDia = delDia.reduce((total, fila) => total + (fila.excluida ? 0 : (fila.horas ?? 0)), 0);
               return (
                 <tbody key={dia} className="border-b border-borde last:border-b-0">
                   <tr className="bg-superficie-2/50">
@@ -468,7 +501,14 @@ export function PaginaReporte() {
                     </td>
                   </tr>
                   {delDia.map((fila) => (
-                    <FilaActividad key={fila.entradaId} fila={fila} seleccionada={seleccion.has(fila.entradaId)} alAlternar={() => alternar(fila.entradaId)} alGuardar={reemplazarFila} />
+                    <FilaActividad
+                      key={fila.entradaId}
+                      fila={fila}
+                      seleccionada={seleccion.has(fila.entradaId)}
+                      alAlternar={() => alternar(fila.entradaId)}
+                      alGuardar={reemplazarFila}
+                      alCambiarInclusion={(incluir) => void cambiarInclusion(fila, incluir)}
+                    />
                   ))}
                   {sugeridas.map((reunion) => (
                     <tr key={reunion.evento.id} className="text-texto-3">
@@ -512,11 +552,13 @@ function FilaActividad({
   seleccionada,
   alAlternar,
   alGuardar,
+  alCambiarInclusion,
 }: {
   fila: FilaReporteDto;
   seleccionada: boolean;
   alAlternar: () => void;
   alGuardar: (fila: FilaReporteDto) => void;
+  alCambiarInclusion: (incluir: boolean) => void;
 }) {
   // Se edita el texto sin Markdown; si se cambia, la entrada del diario queda con ese texto plano.
   const [descripcion, setDescripcion] = useState(fila.descripcionTexto);
@@ -537,7 +579,6 @@ function FilaActividad({
       horaFin: fila.horaFin,
       tableroReporteId: fila.tableroReporteId,
       fechaSolicitud: fila.fechaSolicitudPersonalizada ? fila.fechaSolicitud : null,
-      estado: fila.estado,
       ...cambios,
     };
     setGuardando(true);
@@ -568,9 +609,22 @@ function FilaActividad({
   const claseCampo = 'h-8 w-full rounded-md border border-transparent bg-transparent px-2 transition hover:border-borde focus:border-acento focus:bg-superficie focus:outline-none';
 
   return (
-    <tr className={unirClases('group border-t border-borde/60 align-middle', fila.fechaReportado && 'text-texto-2', seleccionada ? 'bg-violet-50/40' : 'hover:bg-superficie-2/40')}>
+    <tr
+      className={unirClases(
+        'group border-t border-borde/60 align-middle',
+        fila.fechaReportado && 'text-texto-2',
+        fila.excluida ? 'bg-superficie-2/40 text-texto-3 [&_input]:text-texto-3' : seleccionada ? 'bg-violet-50/40' : 'hover:bg-superficie-2/40',
+      )}
+    >
       <td className="px-3 py-1">
-        <input type="checkbox" checked={seleccionada} onChange={alAlternar} aria-label={`Seleccionar ${fila.descripcionTexto}`} className="size-4 accent-violet-600" />
+        <input
+          type="checkbox"
+          checked={seleccionada}
+          disabled={fila.excluida}
+          onChange={alAlternar}
+          aria-label={`Seleccionar ${fila.descripcionTexto}`}
+          className="size-4 accent-violet-600 disabled:opacity-40"
+        />
       </td>
       <td className="px-1 py-1">
         <input
@@ -612,7 +666,22 @@ function FilaActividad({
               Reportada
             </Insignia>
           )}
+          {/* Los tipos que no son Evento/Tarea se señalan: por defecto no van al reporte. */}
+          {fila.tipo !== 'Evento' && fila.tipo !== 'Tarea' && <Insignia tono="neutro">{configuracionTipo[fila.tipo].etiqueta}</Insignia>}
           {guardando && <Loader2 className="size-3.5 shrink-0 animate-spin text-texto-3" />}
+          {fila.excluida ? (
+            <Boton variante="secundario" tamano="sm" icono={Eye} className="shrink-0" onClick={() => alCambiarInclusion(true)}>
+              Incluir
+            </Boton>
+          ) : (
+            <BotonIcono
+              icono={EyeOff}
+              etiqueta="Quitar del reporte (sigue en el diario)"
+              tamano="sm"
+              className="shrink-0 opacity-0 transition-opacity focus:opacity-100 group-hover:opacity-100"
+              onClick={() => alCambiarInclusion(false)}
+            />
+          )}
         </div>
       </td>
       <td className="px-1 py-1">
@@ -631,18 +700,16 @@ function FilaActividad({
         </div>
       </td>
       <td className="px-1 py-1">
-        <select
-          value={fila.estado}
-          onChange={(evento) => void guardar({ estado: evento.target.value as DatosFilaReporte['estado'] })}
-          aria-label="Estado"
+        {/* Automático: sin hora de fin = En proceso; con hora de fin = Terminada. */}
+        <span
+          title={fila.estado === 'Terminada' ? 'Tiene hora de inicio y de fin' : 'Falta la hora de fin'}
           className={unirClases(
-            'h-7 w-full rounded-lg border px-2 text-xs font-medium focus:outline-none',
+            'flex h-7 w-full items-center rounded-lg border px-2 text-xs font-medium',
             fila.estado === 'Terminada' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-200 bg-amber-50 text-amber-800',
           )}
         >
-          <option value="Terminada">{textoEstado.Terminada}</option>
-          <option value="EnProceso">{textoEstado.EnProceso}</option>
-        </select>
+          {textoEstado[fila.estado]}
+        </span>
       </td>
       <td className="px-3 py-1 text-right font-medium tabular-nums">{fila.horas === null ? <span className="text-amber-600">—</span> : horasExcel(fila.horas)}</td>
     </tr>

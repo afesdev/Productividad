@@ -15,9 +15,10 @@ public class ReporteController : ControllerBase
     public ReporteController(ISender mediador) => _mediador = mediador;
 
     public sealed record CuerpoTablero(string Nombre, Guid? ProyectoId, bool EstaArchivado = false);
-    public sealed record CuerpoFila(string Descripcion, TimeOnly HoraInicio, TimeOnly? HoraFin, Guid? TableroReporteId, DateOnly? FechaSolicitud, EstadoActividadReporte Estado);
+    public sealed record CuerpoFila(string Descripcion, TimeOnly HoraInicio, TimeOnly? HoraFin, Guid? TableroReporteId, DateOnly? FechaSolicitud);
     public sealed record CuerpoMarcar(IReadOnlyList<Guid> EntradaIds, bool Reportadas = true);
     public sealed record CuerpoExportar(IReadOnlyList<Guid> EntradaIds, string Ejecutor);
+    public sealed record CuerpoInclusion(bool Incluir);
 
     // ---------- Tableros ----------
 
@@ -42,12 +43,17 @@ public class ReporteController : ControllerBase
     // ---------- Actividades ----------
 
     [HttpGet("actividades")]
-    public async Task<ActionResult<IReadOnlyList<FilaReporteDto>>> ObtenerActividades([FromQuery] DateOnly desde, [FromQuery] DateOnly hasta, [FromQuery] bool soloPendientes = false) =>
-        Ok(await _mediador.Send(new ObtenerReporteActividadesConsulta(desde, hasta, soloPendientes)));
+    public async Task<ActionResult<IReadOnlyList<FilaReporteDto>>> ObtenerActividades([FromQuery] DateOnly desde, [FromQuery] DateOnly hasta, [FromQuery] bool soloPendientes = false, [FromQuery] bool incluirExcluidas = false) =>
+        Ok(await _mediador.Send(new ObtenerReporteActividadesConsulta(desde, hasta, soloPendientes, incluirExcluidas)));
+
+    /// <summary>Quita una actividad del reporte o la vuelve a incluir (p. ej. un aprendizaje con hora que sí se quiere reportar).</summary>
+    [HttpPut("actividades/{entradaId:guid}/inclusion")]
+    public async Task<ActionResult<FilaReporteDto>> CambiarInclusion(Guid entradaId, [FromBody] CuerpoInclusion cuerpo) =>
+        Ok(await _mediador.Send(new CambiarInclusionReporteComando(entradaId, cuerpo.Incluir)));
 
     [HttpPut("actividades/{entradaId:guid}")]
     public async Task<ActionResult<FilaReporteDto>> ActualizarActividad(Guid entradaId, [FromBody] CuerpoFila cuerpo) =>
-        Ok(await _mediador.Send(new ActualizarFilaReporteComando(entradaId, cuerpo.Descripcion, cuerpo.HoraInicio, cuerpo.HoraFin, cuerpo.TableroReporteId, cuerpo.FechaSolicitud, cuerpo.Estado)));
+        Ok(await _mediador.Send(new ActualizarFilaReporteComando(entradaId, cuerpo.Descripcion, cuerpo.HoraInicio, cuerpo.HoraFin, cuerpo.TableroReporteId, cuerpo.FechaSolicitud)));
 
     [HttpPost("actividades/reportadas")]
     public async Task<ActionResult<int>> MarcarReportadas([FromBody] CuerpoMarcar cuerpo) =>

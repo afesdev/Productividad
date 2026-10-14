@@ -182,8 +182,16 @@ public sealed class ManejadorGuardarEtiquetaDocumentoComando : IRequestHandler<G
     public async Task<Guid> Handle(GuardarEtiquetaDocumentoComando comando, CancellationToken tokenCancelacion)
     {
         var nombre = comando.Nombre.Trim().TrimStart('#');
-        if (await _contexto.EtiquetasDocumento.AnyAsync(etiqueta => etiqueta.Nombre == nombre && etiqueta.Id != comando.Id, tokenCancelacion))
+        var existenteId = await _contexto.EtiquetasDocumento
+            .Where(etiqueta => etiqueta.Nombre == nombre && etiqueta.Id != comando.Id)
+            .Select(etiqueta => (Guid?)etiqueta.Id)
+            .FirstOrDefaultAsync(tokenCancelacion);
+        if (existenteId is { } idExistente)
+        {
+            // Crear una que ya existe devuelve la existente (el selector solo quiere asignarla); renombrar sobre otra sí es un conflicto.
+            if (comando.Id is null) return idExistente;
             throw new ExcepcionConflicto($"Ya tienes una etiqueta llamada \"{nombre}\".");
+        }
 
         EtiquetaDocumento etiqueta;
         if (comando.Id is { } id)
@@ -199,7 +207,20 @@ public sealed class ManejadorGuardarEtiquetaDocumentoComando : IRequestHandler<G
 
         etiqueta.Nombre = nombre;
         etiqueta.Color = comando.Color;
-        await _contexto.GuardarCambiosAsync(tokenCancelacion);
+        try
+        {
+            await _contexto.GuardarCambiosAsync(tokenCancelacion);
+        }
+        catch (DbUpdateException) when (comando.Id is null)
+        {
+            // Dos peticiones a la vez con el mismo nombre: la otra ganó la carrera (índice único). Se devuelve la suya.
+            var ganadora = await _contexto.EtiquetasDocumento.AsNoTracking()
+                .Where(otra => otra.Nombre == nombre)
+                .Select(otra => (Guid?)otra.Id)
+                .FirstOrDefaultAsync(tokenCancelacion);
+            if (ganadora is null) throw;
+            return ganadora.Value;
+        }
         return etiqueta.Id;
     }
 }
