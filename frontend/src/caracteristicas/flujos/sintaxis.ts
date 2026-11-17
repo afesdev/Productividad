@@ -42,6 +42,8 @@ interface Marco {
   cerrados: string[];
   /** Último paso creado en este marco (de él nacen las ramas más profundas). */
   ultimo: string | null;
+  /** Ya hubo una línea (paso o salto) en este marco: una nueva [Etiqueta] abre una rama hermana. */
+  conLineas: boolean;
 }
 
 const normalizar = (texto: string) => texto.trim().toLowerCase();
@@ -77,11 +79,11 @@ export function interpretarTexto(texto: string): ResultadoSintaxis {
     }
 
     // Ubicar el marco según la sangría.
-    if (pila.length === 0) pila.push({ sangria, origen: null, frontera: [], cerrados: [], ultimo: null });
+    if (pila.length === 0) pila.push({ sangria, origen: null, frontera: [], cerrados: [], ultimo: null, conLineas: false });
     while (pila.length > 0 && pila[pila.length - 1].sangria > sangria) {
       const cerrado = pila.pop()!;
       const finales = [...cerrado.cerrados, ...cerrado.frontera];
-      if (pila.length === 0) pila.push({ sangria, origen: null, frontera: finales, cerrados: [], ultimo: null });
+      if (pila.length === 0) pila.push({ sangria, origen: null, frontera: finales, cerrados: [], ultimo: null, conLineas: false });
       else pila[pila.length - 1].frontera = finales;
     }
     let marco = pila[pila.length - 1];
@@ -89,14 +91,16 @@ export function interpretarTexto(texto: string): ResultadoSintaxis {
       if (marco.ultimo === null) {
         errores.push({ linea: numero, mensaje: 'Rama sin paso anterior: quita la sangría.' });
       } else {
-        pila.push({ sangria, origen: marco.ultimo, frontera: [marco.ultimo], cerrados: [], ultimo: null });
+        pila.push({ sangria, origen: marco.ultimo, frontera: [marco.ultimo], cerrados: [], ultimo: null, conLineas: false });
         marco = pila[pila.length - 1];
       }
-    } else if (tieneEtiqueta && marco.origen !== null && marco.ultimo !== null) {
+    } else if (tieneEtiqueta && marco.origen !== null && marco.conLineas) {
       // Rama hermana: se guarda el final de la anterior y se vuelve a salir del paso de origen.
       marco.cerrados.push(...marco.frontera);
       marco.frontera = [marco.origen];
     }
+
+    marco.conLineas = true;
 
     // Salto a un paso existente.
     if (resto.startsWith('->')) {

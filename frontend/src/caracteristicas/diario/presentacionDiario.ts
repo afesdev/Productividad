@@ -26,14 +26,11 @@ export const configuracionTipo: Record<TipoEntradaDiario, ConfiguracionTipo> = {
   Nota: { etiqueta: 'Nota', plural: 'Notas', icono: StickyNote, prefijos: ['n', 'nota'], chip: 'bg-zinc-100 text-zinc-800 border-zinc-200', recuadro: 'bg-zinc-100 text-zinc-500', punto: 'bg-zinc-400' },
 };
 
-/** Plantilla de la nota de un día nuevo (se guarda solo si la editas). */
 /** Botones de IA del diario (nota y detalle de entradas). Resumir no se ofrece: reemplazaría el texto entero. */
 export const accionesIADiario: { accion: AccionTextoIA; etiqueta: string; icono: Icono }[] = [
   { accion: 'Mejorar', etiqueta: 'Mejorar redacción', icono: Wand2 },
   { accion: 'Corregir', etiqueta: 'Corregir ortografía', icono: SpellCheck },
 ];
-
-export const plantillaNotaDiaria = '## Reuniones\n- \n\n## Trabajo realizado\n- \n\n## Tareas creadas\n- [ ] \n\n## Para mañana\n- [ ] \n';
 
 // ---------- Fechas (siempre del día local, formato AAAA-MM-DD) ----------
 

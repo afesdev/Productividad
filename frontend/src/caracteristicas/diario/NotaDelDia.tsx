@@ -6,7 +6,7 @@ import { useEditorState, type Editor } from '@tiptap/react';
 import { EditorRico, obtenerMarkdown, transformarConIA, type ManejadorEditorRico } from '../../componentes/editor/EditorRico';
 import { usarWikiLinks } from '../../componentes/editor/usarWikiLinks';
 import { unirClases, type Icono } from '../../componentes/ui/primitivos';
-import { accionesIADiario, plantillaNotaDiaria } from './presentacionDiario';
+import { accionesIADiario } from './presentacionDiario';
 
 const EsperaAutoguardadoMs = 1200;
 
@@ -14,7 +14,7 @@ type EstadoGuardado = 'guardado' | 'pendiente' | 'guardando' | 'error';
 
 /**
  * Nota libre del día (editor visual con [[enlaces]] e imágenes) + ánimo y energía.
- * Se autoguarda; un día nuevo empieza con la plantilla y solo se guarda si se edita.
+ * Se autoguarda; un día nuevo empieza vacío y solo se guarda si se edita.
  * Montar con key={fecha}: al cambiar de día se guarda lo pendiente del anterior.
  */
 export function NotaDelDia({ dia, alGuardar }: { dia: DiaDiarioDto; alGuardar: (registroId: string) => void }) {
@@ -92,7 +92,7 @@ export function NotaDelDia({ dia, alGuardar }: { dia: DiaDiarioDto; alGuardar: (
         {editorListo && <BarraIA editor={editorListo} />}
         <EditorRico
           ref={editor}
-          contenidoInicial={dia.contenidoMarkdown || plantillaNotaDiaria}
+          contenidoInicial={dia.contenidoMarkdown}
           alCambiar={() => marcarCambio()}
           alListo={(instancia) => {
             instanciaEditor.current = instancia;
